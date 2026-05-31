@@ -17,17 +17,15 @@ dependencies:
   # Generador de QR
   qr_flutter: ^4.1.0
 
-  # Generador de Word (.docx)
-  docx_template: ^0.4.0
+  # Generador de PDF
+  pdf: ^3.11.1
+  printing: ^5.13.1
 
   # Guardar archivos en el dispositivo
   path_provider: ^2.1.4
 
-  # Abrir archivos (el Word generado)
+  # Abrir archivos
   open_filex: ^4.5.0
-
-  # Permisos en Android
-  permission_handler: ^11.3.1
 
   # Formateo de fechas
   intl: ^0.19.0
