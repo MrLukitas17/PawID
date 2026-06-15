@@ -9,26 +9,43 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.8
 
-  # Selector de imagen (foto de mascota)
+  # Supabase
+  supabase_flutter: ^2.5.6
+
+  # Hash de contraseñas
+  crypto: ^3.0.3
+
+  # Selector de imagen
   image_picker: ^1.1.2
 
   # Generador de QR
   qr_flutter: ^4.1.0
 
+  # Escáner de QR
+  mobile_scanner: ^5.2.3
+
+  # Abrir URLs en el navegador
+  url_launcher: ^6.3.0
+
   # Generador de PDF
   pdf: ^3.11.1
   printing: ^5.13.1
 
-  # Guardar archivos en el dispositivo
+  # Guardar archivos
   path_provider: ^2.1.4
 
   # Abrir archivos
   open_filex: ^4.5.0
 
+  # Calendario
+  table_calendar: ^3.1.2
+
   # Formateo de fechas
-  intl: ^0.19.0
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

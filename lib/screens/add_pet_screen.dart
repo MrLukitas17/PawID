@@ -8,8 +8,9 @@ import '../widgets/paw_text_field.dart';
 
 class AddPetScreen extends StatefulWidget {
   final Pet? pet;
+  final String userId;
 
-  const AddPetScreen({super.key, this.pet});
+  const AddPetScreen({super.key, this.pet, this.userId = ''});
 
   @override
   State<AddPetScreen> createState() => _AddPetScreenState();
@@ -75,10 +76,8 @@ class _AddPetScreenState extends State<AddPetScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('No se pudo seleccionar imagen: $e'),
-            backgroundColor: Colors.orange,
-          ),
+          SnackBar(content: Text('No se pudo seleccionar imagen: $e'),
+              backgroundColor: Colors.orange),
         );
       }
     }
@@ -92,18 +91,16 @@ class _AddPetScreenState extends State<AddPetScreen> {
         initialDate: now.subtract(const Duration(days: 365)),
         firstDate: DateTime(2000),
         lastDate: now,
-        builder: (context, child) {
-          return Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.light(
-                primary: AppColors.primary,
-                onPrimary: AppColors.white,
-                surface: AppColors.background,
-              ),
+        builder: (context, child) => Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: AppColors.white,
+              surface: AppColors.background,
             ),
-            child: child!,
-          );
-        },
+          ),
+          child: child!,
+        ),
       );
       if (picked != null && mounted) {
         setState(() {
@@ -113,24 +110,12 @@ class _AddPetScreenState extends State<AddPetScreen> {
               '${picked.year}';
         });
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error al abrir el calendario'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-    }
+    } catch (_) {}
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-
-    // Quita el foco del teclado
     FocusScope.of(context).unfocus();
-
     setState(() => _isSaving = true);
 
     try {
@@ -149,22 +134,19 @@ class _AddPetScreenState extends State<AddPetScreen> {
       );
 
       if (_isEditing) {
-        await PetStorageService.updatePet(pet);
+        await PetStorageService.updatePet(pet, userId: widget.userId);
       } else {
-        await PetStorageService.addPet(pet);
+        await PetStorageService.addPet(pet, userId: widget.userId);
       }
 
       if (mounted) {
-        // Pequeña pausa para que el usuario vea que guardó
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 10),
-                Text('Mascota guardada exitosamente'),
-              ],
-            ),
+            content: Row(children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 10),
+              Text('Mascota guardada exitosamente'),
+            ]),
             backgroundColor: AppColors.primary,
             duration: Duration(seconds: 1),
           ),
@@ -175,10 +157,8 @@ class _AddPetScreenState extends State<AddPetScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
+          SnackBar(content: Text('Error al guardar: $e'),
+              backgroundColor: Colors.redAccent),
         );
       }
     } finally {
@@ -195,10 +175,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
         title: Text(
           _isEditing ? 'Editar Mascota' : 'Nueva Mascota',
           style: const TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
+              color: AppColors.textDark, fontWeight: FontWeight.w700, fontSize: 20),
         ),
         iconTheme: const IconThemeData(color: AppColors.primary),
       ),
@@ -212,35 +189,26 @@ class _AddPetScreenState extends State<AddPetScreen> {
               Center(child: _buildPhotoSelector()),
               const SizedBox(height: 8),
               const Center(
-                child: Text(
-                  'Foto opcional — toca para agregar',
-                  style: TextStyle(fontSize: 12, color: AppColors.textLight),
-                ),
+                child: Text('Foto opcional — toca para agregar',
+                    style: TextStyle(fontSize: 12, color: AppColors.textLight)),
               ),
               const SizedBox(height: 24),
-
               _sectionTitle('Datos de la Mascota'),
               const SizedBox(height: 12),
-
               PawTextField(
                 label: 'Nombre *',
                 controller: _nameController,
-                validator: (v) =>
-                v == null || v.isEmpty ? 'Campo requerido' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
               ),
               const SizedBox(height: 16),
-
               _buildSpeciesDropdown(),
               const SizedBox(height: 16),
-
               PawTextField(
                 label: 'Raza *',
                 controller: _breedController,
-                validator: (v) =>
-                v == null || v.isEmpty ? 'Campo requerido' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
               ),
               const SizedBox(height: 16),
-
               GestureDetector(
                 onTap: _pickDate,
                 child: AbsorbPointer(
@@ -248,56 +216,42 @@ class _AddPetScreenState extends State<AddPetScreen> {
                     label: 'Fecha de Nacimiento *',
                     hint: 'Toca para seleccionar',
                     controller: _birthDateController,
-                    validator: (v) =>
-                    v == null || v.isEmpty ? 'Campo requerido' : null,
+                    validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
                   ),
                 ),
               ),
-
               const SizedBox(height: 28),
               _sectionTitle('Datos del Dueño'),
               const SizedBox(height: 12),
-
               PawTextField(
                 label: 'Nombre del dueño *',
                 controller: _ownerNameController,
-                validator: (v) =>
-                v == null || v.isEmpty ? 'Campo requerido' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
               ),
               const SizedBox(height: 16),
-
               PawTextField(
                 label: 'Teléfono *',
                 controller: _ownerPhoneController,
                 keyboardType: TextInputType.phone,
-                validator: (v) =>
-                v == null || v.isEmpty ? 'Campo requerido' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
               ),
               const SizedBox(height: 16),
-
               PawTextField(
                 label: 'Email (opcional)',
                 controller: _ownerEmailController,
                 keyboardType: TextInputType.emailAddress,
               ),
-
               const SizedBox(height: 36),
-
               _isSaving
-                  ? const Center(
-                child: Column(
-                  children: [
-                    CircularProgressIndicator(color: AppColors.primary),
-                    SizedBox(height: 8),
-                    Text('Guardando...', style: TextStyle(color: AppColors.textMedium)),
-                  ],
-                ),
-              )
+                  ? const Center(child: Column(children: [
+                CircularProgressIndicator(color: AppColors.primary),
+                SizedBox(height: 8),
+                Text('Guardando...', style: TextStyle(color: AppColors.textMedium)),
+              ]))
                   : ElevatedButton(
                 onPressed: _save,
                 child: Text(_isEditing ? 'Guardar Cambios' : 'Agregar Mascota'),
               ),
-
               const SizedBox(height: 32),
             ],
           ),
@@ -312,8 +266,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
       child: Stack(
         children: [
           Container(
-            width: 100,
-            height: 100,
+            width: 100, height: 100,
             decoration: BoxDecoration(
               color: AppColors.primary.withOpacity(0.1),
               shape: BoxShape.circle,
@@ -322,19 +275,16 @@ class _AddPetScreenState extends State<AddPetScreen> {
             clipBehavior: Clip.antiAlias,
             child: _photoPath != null
                 ? Image.file(File(_photoPath!), fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                    Icons.pets, size: 44, color: AppColors.primary))
+                errorBuilder: (_, __, ___) =>
+                const Icon(Icons.pets, size: 44, color: AppColors.primary))
                 : const Icon(Icons.pets, size: 44, color: AppColors.primary),
           ),
           Positioned(
-            bottom: 0,
-            right: 0,
+            bottom: 0, right: 0,
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-              ),
+                  color: AppColors.primary, shape: BoxShape.circle),
               child: const Icon(Icons.camera_alt, size: 16, color: AppColors.white),
             ),
           ),
@@ -349,30 +299,21 @@ class _AddPetScreenState extends State<AddPetScreen> {
       decoration: const InputDecoration(
         labelText: 'Especie *',
         enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.inputUnderline, width: 1.5),
-        ),
+            borderSide: BorderSide(color: AppColors.inputUnderline, width: 1.5)),
         focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.primary, width: 2),
-        ),
+            borderSide: BorderSide(color: AppColors.primary, width: 2)),
         contentPadding: EdgeInsets.symmetric(vertical: 8),
       ),
       dropdownColor: AppColors.background,
       style: const TextStyle(color: AppColors.textDark, fontSize: 14),
-      items: _species
-          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-          .toList(),
+      items: _species.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
       onChanged: (v) => setState(() => _selectedSpecies = v!),
     );
   }
 
   Widget _sectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        color: AppColors.primary,
-      ),
-    );
+    return Text(title,
+        style: const TextStyle(
+            fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.primary));
   }
 }

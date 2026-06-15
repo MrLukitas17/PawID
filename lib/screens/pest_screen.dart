@@ -7,7 +7,9 @@ import 'add_pet_screen.dart';
 import 'pet_detail_screen.dart';
 
 class PetsScreen extends StatefulWidget {
-  const PetsScreen({super.key});
+  final String userId;
+
+  const PetsScreen({super.key, this.userId = ''});
 
   @override
   State<PetsScreen> createState() => _PetsScreenState();
@@ -31,62 +33,46 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // Se llama cuando la app vuelve a primer plano
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _loadPets();
-    }
+    if (state == AppLifecycleState.resumed) _loadPets();
   }
 
   Future<void> _loadPets() async {
     if (!mounted) return;
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() { _loading = true; _error = null; });
     try {
-      final pets = await PetStorageService.loadPets();
-      if (mounted) {
-        setState(() {
-          _pets = pets;
-          _loading = false;
-        });
-      }
+      final pets = await PetStorageService.loadPets(userId: widget.userId);
+      if (mounted) setState(() { _pets = pets; _loading = false; });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = 'Error al cargar mascotas: $e';
-          _loading = false;
-        });
-      }
+      if (mounted) setState(() { _error = 'Error al cargar mascotas: $e'; _loading = false; });
     }
   }
 
   Future<void> _goToAddPet() async {
     final added = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const AddPetScreen()),
+      MaterialPageRoute(builder: (_) => AddPetScreen(userId: widget.userId)),
     );
-    // Recarga siempre al volver, haya o no cambios
-    await _loadPets();
-    if (added == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Mascota agregada correctamente'),
-          backgroundColor: AppColors.primary,
-          duration: Duration(seconds: 2),
-        ),
-      );
+    if (added == true) {
+      await _loadPets();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Mascota agregada correctamente'),
+            backgroundColor: AppColors.primary,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
   Future<void> _goToDetail(Pet pet) async {
     await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => PetDetailScreen(pet: pet)),
+      MaterialPageRoute(builder: (_) => PetDetailScreen(pet: pet, userId: widget.userId)),
     );
-    // Recarga al volver del detalle (puede haber editado o eliminado)
     await _loadPets();
   }
 
@@ -98,16 +84,9 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
         backgroundColor: AppColors.background,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: const Text(
-          'Mis Mascotas',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.w700,
-            fontSize: 22,
-          ),
-        ),
+        title: const Text('Mis Mascotas',
+            style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w700, fontSize: 22)),
         actions: [
-          // Botón refrescar manual
           IconButton(
             icon: const Icon(Icons.refresh, color: AppColors.primary),
             onPressed: _loadPets,
@@ -120,23 +99,16 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
         child: const Icon(Icons.add, color: AppColors.white),
       ),
       body: _loading
-          ? const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: AppColors.primary),
-            SizedBox(height: 16),
-            Text(
-              'Cargando mascotas...',
-              style: TextStyle(color: AppColors.textMedium, fontSize: 14),
-            ),
-          ],
-        ),
-      )
-          : _error != null
-          ? _buildError()
-          : _pets.isEmpty
-          ? _buildEmpty()
+          ? const Center(child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: AppColors.primary),
+          SizedBox(height: 16),
+          Text('Cargando mascotas...', style: TextStyle(color: AppColors.textMedium)),
+        ],
+      ))
+          : _error != null ? _buildError()
+          : _pets.isEmpty ? _buildEmpty()
           : _buildList(),
     );
   }
@@ -150,16 +122,9 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
           children: [
             const Icon(Icons.error_outline, size: 56, color: Colors.redAccent),
             const SizedBox(height: 16),
-            Text(
-              _error!,
-              style: const TextStyle(color: AppColors.textMedium),
-              textAlign: TextAlign.center,
-            ),
+            Text(_error!, style: const TextStyle(color: AppColors.textMedium), textAlign: TextAlign.center),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loadPets,
-              child: const Text('Reintentar'),
-            ),
+            ElevatedButton(onPressed: _loadPets, child: const Text('Reintentar')),
           ],
         ),
       ),
@@ -173,20 +138,11 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
         children: [
           Icon(Icons.pets, size: 72, color: AppColors.primary.withOpacity(0.3)),
           const SizedBox(height: 16),
-          const Text(
-            'No tienes mascotas aún',
-            style: TextStyle(
-              fontSize: 18,
-              color: AppColors.textMedium,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          const Text('No tienes mascotas aún',
+              style: TextStyle(fontSize: 18, color: AppColors.textMedium, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          const Text(
-            'Toca el botón + para agregar tu primera mascota',
-            style: TextStyle(fontSize: 13, color: AppColors.textLight),
-            textAlign: TextAlign.center,
-          ),
+          const Text('Toca el botón + para agregar tu primera mascota',
+              style: TextStyle(fontSize: 13, color: AppColors.textLight), textAlign: TextAlign.center),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: _goToAddPet,
@@ -219,19 +175,14 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
+          boxShadow: [BoxShadow(
               color: AppColors.primary.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
+              blurRadius: 10, offset: const Offset(0, 3))],
         ),
         child: Row(
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 56, height: 56,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.primary, width: 1.5),
@@ -239,12 +190,8 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
               ),
               clipBehavior: Clip.antiAlias,
               child: pet.photoPath != null
-                  ? Image.file(
-                File(pet.photoPath!),
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                    Icons.pets, size: 28, color: AppColors.primary),
-              )
+                  ? Image.file(File(pet.photoPath!), fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.pets, size: 28, color: AppColors.primary))
                   : const Icon(Icons.pets, size: 28, color: AppColors.primary),
             ),
             const SizedBox(width: 14),
@@ -252,26 +199,13 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    pet.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
-                    ),
-                  ),
+                  Text(pet.name, style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                   const SizedBox(height: 3),
-                  Text(
-                    '${pet.species} · ${pet.breed}',
-                    style: const TextStyle(
-                        fontSize: 13, color: AppColors.textMedium),
-                  ),
+                  Text('${pet.species} · ${pet.breed}',
+                      style: const TextStyle(fontSize: 13, color: AppColors.textMedium)),
                   const SizedBox(height: 2),
-                  Text(
-                    pet.age,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textLight),
-                  ),
+                  Text(pet.age, style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
                 ],
               ),
             ),

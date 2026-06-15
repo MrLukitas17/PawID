@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/paw_text_field.dart';
+import '../services/auth_service.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
 
@@ -16,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -24,32 +26,37 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-      // TODO: Conectar con Firebase Auth u otro backend
-      await Future.delayed(const Duration(seconds: 1));
-      setState(() => _isLoading = false);
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
 
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => HomeScreen(
-              userName: 'Usuario',
-              userEmail: _emailController.text,
-            ),
-          ),
-        );
-      }
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final user = await AuthService.login(
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (user == null) {
+      setState(() => _errorMessage = 'Email o contraseña incorrectos.');
+      return;
     }
-  }
 
-  void _handleForgotPassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Funcionalidad próximamente'),
-        backgroundColor: AppColors.primaryLight,
+    // Navegar al home pasando datos del usuario
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HomeScreen(
+          userName: user['nombre'] ?? 'Usuario',
+          userEmail: user['email'] ?? '',
+          userId: user['id'] ?? '',
+        ),
       ),
     );
   }
@@ -70,60 +77,80 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 48),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
+                  child: const Text(
                     'Iniciar Sesión',
                     style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textDark,
-                      letterSpacing: -0.5,
                     ),
                   ),
                 ),
                 const SizedBox(height: 28),
+
                 PawTextField(
                   label: 'Email',
                   hint: 'example@email.com',
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Ingresa tu email';
-                    if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Ingresa tu email';
+                    if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) {
                       return 'Email inválido';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
+
                 PawTextField(
                   label: 'Contraseña',
                   controller: _passwordController,
                   isPassword: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Ingresa tu contraseña';
-                    if (value.length < 6) return 'Mínimo 6 caracteres';
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Ingresa tu contraseña';
+                    if (v.length < 6) return 'Mínimo 6 caracteres';
                     return null;
                   },
                 ),
-                const SizedBox(height: 40),
+
+                // Error message
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 32),
+
                 _isLoading
                     ? const CircularProgressIndicator(color: AppColors.primary)
                     : ElevatedButton(
                   onPressed: _handleLogin,
                   child: const Text('Entrar'),
                 ),
+
                 const SizedBox(height: 24),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    GestureDetector(
-                      onTap: _handleForgotPassword,
-                      child: const Text(
-                        '¿Olvidaste Tu Contraseña?',
-                        style: TextStyle(color: AppColors.textMedium, fontSize: 13),
-                      ),
+                    const Text(
+                      '¿No tienes cuenta? ',
+                      style: TextStyle(color: AppColors.textMedium, fontSize: 13),
                     ),
-                    const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => Navigator.push(
                         context,
@@ -152,12 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildLogo() {
     return Column(
       children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: const BoxDecoration(shape: BoxShape.circle),
-          child: const Icon(Icons.pets, size: 42, color: AppColors.primary),
-        ),
+        const Icon(Icons.pets, size: 56, color: AppColors.primary),
         const SizedBox(height: 10),
         const Text(
           'PawID',

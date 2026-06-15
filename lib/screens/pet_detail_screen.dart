@@ -4,13 +4,15 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../models/pet.dart';
 import '../services/pet_storage_service.dart';
 import '../services/pdf_generator_service.dart';
-import '../theme/app_theme.dart';
 import '../services/qr_data_service.dart';
+import '../theme/app_theme.dart';
 import 'add_pet_screen.dart';
 
 class PetDetailScreen extends StatefulWidget {
   final Pet pet;
-  const PetDetailScreen({super.key, required this.pet});
+  final String userId;
+
+  const PetDetailScreen({super.key, required this.pet, this.userId = ''});
 
   @override
   State<PetDetailScreen> createState() => _PetDetailScreenState();
@@ -19,6 +21,7 @@ class PetDetailScreen extends StatefulWidget {
 class _PetDetailScreenState extends State<PetDetailScreen> {
   late Pet _pet;
   bool _isGenerating = false;
+  bool _isDeleting = false;
 
   @override
   void initState() {
@@ -28,6 +31,91 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
 
   String get _qrData => QrDataService.generateQrContent(_pet);
 
+  // ─── EDITAR ───────────────────────────────────────────────────────────────
+  Future<void> _editPet() async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddPetScreen(pet: _pet, userId: widget.userId),
+      ),
+    );
+    if (changed == true) {
+      // Recargar datos actualizados desde Supabase
+      final updated = await PetStorageService.getPetById(
+        _pet.id,
+        userId: widget.userId,
+      );
+      if (updated != null && mounted) {
+        setState(() => _pet = updated);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Mascota actualizada'),
+            backgroundColor: AppColors.primary,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  // ─── ELIMINAR ─────────────────────────────────────────────────────────────
+  Future<void> _deletePet() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.background,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Eliminar mascota',
+            style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w700)),
+        content: Text(
+          '¿Eliminar a ${_pet.name}? Esta acción no se puede deshacer.',
+          style: const TextStyle(color: AppColors.textMedium),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.textMedium)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar',
+                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isDeleting = true);
+
+    try {
+      await PetStorageService.deletePet(_pet.id, userId: widget.userId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${_pet.name} eliminado correctamente'),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+        Navigator.pop(context, true); // true = hubo cambios, refresca la lista
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDeleting = false);
+    }
+  }
+
+  // ─── PDF ──────────────────────────────────────────────────────────────────
   Future<void> _openPdf() async {
     setState(() => _isGenerating = true);
     try {
@@ -35,10 +123,8 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al generar PDF: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
+          SnackBar(content: Text('Error al generar PDF: $e'),
+              backgroundColor: Colors.redAccent),
         );
       }
     } finally {
@@ -53,10 +139,8 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al compartir PDF: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
+          SnackBar(content: Text('Error al compartir PDF: $e'),
+              backgroundColor: Colors.redAccent),
         );
       }
     } finally {
@@ -64,37 +148,7 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
     }
   }
 
-  Future<void> _deletePet() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.background,
-        title: const Text('Eliminar mascota',
-            style: TextStyle(color: AppColors.textDark)),
-        content: Text(
-          '¿Eliminar a ${_pet.name}? Esta acción no se puede deshacer.',
-          style: const TextStyle(color: AppColors.textMedium),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppColors.textMedium)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Eliminar',
-                style: TextStyle(color: Colors.redAccent)),
-          ),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      await PetStorageService.deletePet(_pet.id);
-      if (mounted) Navigator.pop(context, true);
-    }
-  }
-
+  // ─── UI ───────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -106,21 +160,25 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
                 color: AppColors.textDark, fontWeight: FontWeight.w700)),
         iconTheme: const IconThemeData(color: AppColors.primary),
         actions: [
+          // Botón editar
           IconButton(
-            icon: const Icon(Icons.edit, color: AppColors.primary),
-            onPressed: () async {
-              final changed = await Navigator.push<bool>(
-                context,
-                MaterialPageRoute(builder: (_) => AddPetScreen(pet: _pet)),
-              );
-              if (changed == true) {
-                final updated = await PetStorageService.getPetById(_pet.id);
-                if (updated != null && mounted) setState(() => _pet = updated);
-              }
-            },
+            icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+            tooltip: 'Editar',
+            onPressed: _isDeleting ? null : _editPet,
           ),
-          IconButton(
+          // Botón eliminar
+          _isDeleting
+              ? const Padding(
+            padding: EdgeInsets.all(12),
+            child: SizedBox(
+              width: 20, height: 20,
+              child: CircularProgressIndicator(
+                  color: Colors.redAccent, strokeWidth: 2),
+            ),
+          )
+              : IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            tooltip: 'Eliminar',
             onPressed: _deletePet,
           ),
         ],
@@ -148,53 +206,40 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
               rows: [
                 _infoRow('Nombre', _pet.ownerName),
                 _infoRow('Teléfono', _pet.ownerPhone),
-                if (_pet.ownerEmail.isNotEmpty)
-                  _infoRow('Email', _pet.ownerEmail),
+                if (_pet.ownerEmail.isNotEmpty) _infoRow('Email', _pet.ownerEmail),
               ],
             ),
             const SizedBox(height: 24),
             _buildQRSection(),
             const SizedBox(height: 20),
-
-            // Botón abrir PDF
             _isGenerating
-                ? const Center(
-              child: Column(
-                children: [
-                  CircularProgressIndicator(color: AppColors.primary),
-                  SizedBox(height: 8),
-                  Text('Generando PDF...',
-                      style: TextStyle(color: AppColors.textMedium)),
-                ],
+                ? const Center(child: Column(children: [
+              CircularProgressIndicator(color: AppColors.primary),
+              SizedBox(height: 8),
+              Text('Generando PDF...', style: TextStyle(color: AppColors.textMedium)),
+            ]))
+                : Column(children: [
+              ElevatedButton.icon(
+                onPressed: _openPdf,
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                label: const Text('Abrir PDF'),
+                style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50)),
               ),
-            )
-                : Column(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _openPdf,
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
-                  label: const Text('Abrir PDF'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _sharePdf,
+                icon: const Icon(Icons.share_outlined, color: AppColors.primary),
+                label: const Text('Compartir PDF',
+                    style: TextStyle(color: AppColors.primary)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  side: const BorderSide(color: AppColors.primary),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed: _sharePdf,
-                  icon: const Icon(Icons.share_outlined,
-                      color: AppColors.primary),
-                  label: const Text('Compartir PDF',
-                      style: TextStyle(color: AppColors.primary)),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    side: const BorderSide(color: AppColors.primary),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ]),
             const SizedBox(height: 32),
           ],
         ),
@@ -206,8 +251,7 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
     return Column(
       children: [
         Container(
-          width: 90,
-          height: 90,
+          width: 90, height: 90,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(color: AppColors.primary, width: 2.5),
@@ -223,31 +267,27 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
         const SizedBox(height: 12),
         Text(_pet.name,
             style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textDark)),
+                fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textDark)),
         Text('${_pet.species} · ${_pet.breed}',
             style: const TextStyle(fontSize: 14, color: AppColors.textMedium)),
       ],
     );
   }
 
-  Widget _buildInfoCard(
-      {required String title,
-        required IconData icon,
-        required List<Widget> rows}) {
+  Widget _buildInfoCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> rows,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.primary.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4))
-        ],
+        boxShadow: [BoxShadow(
+            color: AppColors.primary.withOpacity(0.08),
+            blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,11 +295,8 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
           Row(children: [
             Icon(icon, size: 18, color: AppColors.primary),
             const SizedBox(width: 8),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary)),
+            Text(title, style: const TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.primary)),
           ]),
           const SizedBox(height: 14),
           ...rows,
@@ -274,17 +311,11 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-              width: 140,
-              child: Text(label,
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.textMedium))),
-          Expanded(
-              child: Text(value,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark))),
+          SizedBox(width: 140,
+              child: Text(label, style: const TextStyle(
+                  fontSize: 13, color: AppColors.textMedium))),
+          Expanded(child: Text(value, style: const TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark))),
         ],
       ),
     );
@@ -297,23 +328,17 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.primary.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4))
-        ],
+        boxShadow: [BoxShadow(
+            color: AppColors.primary.withOpacity(0.08),
+            blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
-          const Text('Código QR',
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary)),
+          const Text('Código QR', style: TextStyle(
+              fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.primary)),
           const SizedBox(height: 6),
           const Text(
-            'Escanea con la cámara del celular. Se abre el navegador y puedes descargar el PDF',
+            'Escanea con la cámara del celular.\nSe abre el navegador y puedes descargar el PDF',
             style: TextStyle(fontSize: 12, color: AppColors.textMedium),
             textAlign: TextAlign.center,
           ),
@@ -331,9 +356,7 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
           const SizedBox(height: 8),
           Text('ID: ${_pet.id}',
               style: const TextStyle(
-                  fontSize: 10,
-                  color: AppColors.textLight,
-                  fontFamily: 'monospace')),
+                  fontSize: 10, color: AppColors.textLight, fontFamily: 'monospace')),
         ],
       ),
     );
