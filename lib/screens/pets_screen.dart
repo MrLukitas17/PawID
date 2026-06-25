@@ -8,8 +8,16 @@ import 'pet_detail_screen.dart';
 
 class PetsScreen extends StatefulWidget {
   final String userId;
+  // Datos del dueño que vienen del perfil configurado
+  final String ownerName;
+  final String ownerPhone;
 
-  const PetsScreen({super.key, this.userId = ''});
+  const PetsScreen({
+    super.key,
+    this.userId = '',
+    this.ownerName = '',
+    this.ownerPhone = '',
+  });
 
   @override
   State<PetsScreen> createState() => _PetsScreenState();
@@ -52,7 +60,14 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
   Future<void> _goToAddPet() async {
     final added = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => AddPetScreen(userId: widget.userId)),
+      MaterialPageRoute(
+        builder: (_) => AddPetScreen(
+          userId: widget.userId,
+          // Pasa los datos del perfil para pre-rellenar
+          defaultOwnerName: widget.ownerName,
+          defaultOwnerPhone: widget.ownerPhone,
+        ),
+      ),
     );
     if (added == true) {
       await _loadPets();

@@ -48,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // Navegar al home pasando datos del usuario
+    // Navegar al home pasando todos los datos del usuario
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -56,6 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
           userName: user['nombre'] ?? 'Usuario',
           userEmail: user['email'] ?? '',
           userId: user['id'] ?? '',
+          userPhone: user['telefono'] ?? '',
+          userPhotoPath: user['foto_path'] ?? '',
         ),
       ),
     );
@@ -75,9 +77,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 60),
                 _buildLogo(),
                 const SizedBox(height: 48),
-                Align(
+                const Align(
                   alignment: Alignment.centerLeft,
-                  child: const Text(
+                  child: Text(
                     'Iniciar Sesión',
                     style: TextStyle(
                       fontSize: 26,
@@ -114,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
 
-                // Error message
+                // Mensaje de error
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 16),
                   Container(
@@ -147,23 +149,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      '¿No tienes cuenta? ',
-                      style: TextStyle(color: AppColors.textMedium, fontSize: 13),
-                    ),
+                    const Text('¿No tienes cuenta? ',
+                        style: TextStyle(color: AppColors.textMedium, fontSize: 13)),
                     GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                      ),
-                      child: const Text(
-                        'Regístrate',
-                        style: TextStyle(
-                          color: AppColors.linkColor,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                      child: const Text('Regístrate',
+                          style: TextStyle(
+                              color: AppColors.linkColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),
@@ -177,19 +172,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLogo() {
-    return Column(
+    return const Column(
       children: [
-        const Icon(Icons.pets, size: 56, color: AppColors.primary),
-        const SizedBox(height: 10),
-        const Text(
-          'PawID',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textDark,
-            letterSpacing: 1.0,
-          ),
-        ),
+        Icon(Icons.pets, size: 56, color: AppColors.primary),
+        SizedBox(height: 10),
+        Text('PawID',
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+                letterSpacing: 1.0)),
       ],
     );
   }

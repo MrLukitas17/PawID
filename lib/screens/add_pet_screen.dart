@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/pet.dart';
 import '../services/pet_storage_service.dart';
@@ -9,8 +10,17 @@ import '../widgets/paw_text_field.dart';
 class AddPetScreen extends StatefulWidget {
   final Pet? pet;
   final String userId;
+  // Datos del dueño desde el perfil (pre-relleno bloqueado)
+  final String defaultOwnerName;
+  final String defaultOwnerPhone;
 
-  const AddPetScreen({super.key, this.pet, this.userId = ''});
+  const AddPetScreen({
+    super.key,
+    this.pet,
+    this.userId = '',
+    this.defaultOwnerName = '',
+    this.defaultOwnerPhone = '',
+  });
 
   @override
   State<AddPetScreen> createState() => _AddPetScreenState();
@@ -23,7 +33,6 @@ class _AddPetScreenState extends State<AddPetScreen> {
   final _birthDateController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _ownerPhoneController = TextEditingController();
-  final _ownerEmailController = TextEditingController();
 
   String _selectedSpecies = 'Perro';
   String? _photoPath;
@@ -39,15 +48,19 @@ class _AddPetScreenState extends State<AddPetScreen> {
   void initState() {
     super.initState();
     if (_isEditing) {
+      // Modo edición: carga datos de la mascota existente
       final p = widget.pet!;
       _nameController.text = p.name;
       _breedController.text = p.breed;
       _birthDateController.text = p.birthDate;
       _ownerNameController.text = p.ownerName;
       _ownerPhoneController.text = p.ownerPhone;
-      _ownerEmailController.text = p.ownerEmail;
       _selectedSpecies = p.species;
       _photoPath = p.photoPath;
+    } else {
+      // Modo nuevo: pre-rellena con datos del perfil
+      _ownerNameController.text = widget.defaultOwnerName;
+      _ownerPhoneController.text = widget.defaultOwnerPhone;
     }
   }
 
@@ -58,7 +71,6 @@ class _AddPetScreenState extends State<AddPetScreen> {
     _birthDateController.dispose();
     _ownerNameController.dispose();
     _ownerPhoneController.dispose();
-    _ownerEmailController.dispose();
     super.dispose();
   }
 
@@ -129,7 +141,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
         birthDate: _birthDateController.text.trim(),
         ownerName: _ownerNameController.text.trim(),
         ownerPhone: _ownerPhoneController.text.trim(),
-        ownerEmail: _ownerEmailController.text.trim(),
+        ownerEmail: '',
         photoPath: _photoPath,
       );
 
@@ -193,55 +205,104 @@ class _AddPetScreenState extends State<AddPetScreen> {
                     style: TextStyle(fontSize: 12, color: AppColors.textLight)),
               ),
               const SizedBox(height: 24),
+
+              // ── Datos de la Mascota ─────────────────────────────────
               _sectionTitle('Datos de la Mascota'),
               const SizedBox(height: 12),
-              PawTextField(
-                label: 'Nombre *',
+
+              // Nombre: solo letras, máximo 50 caracteres
+              TextFormField(
                 controller: _nameController,
-                validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
+                style: const TextStyle(color: AppColors.textDark, fontSize: 14),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
+                  LengthLimitingTextInputFormatter(50),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Nombre *',
+                  hintText: 'Solo letras, máx. 50 caracteres',
+                  enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.inputUnderline, width: 1.5)),
+                  focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.primary, width: 2)),
+                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Campo requerido';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               _buildSpeciesDropdown(),
               const SizedBox(height: 16),
-              PawTextField(
-                label: 'Raza *',
+
+              // Raza: solo letras, máximo 50 caracteres
+              TextFormField(
                 controller: _breedController,
-                validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
+                style: const TextStyle(color: AppColors.textDark, fontSize: 14),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
+                  LengthLimitingTextInputFormatter(50),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Raza *',
+                  hintText: 'Solo letras, máx. 50 caracteres',
+                  enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.inputUnderline, width: 1.5)),
+                  focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.primary, width: 2)),
+                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Campo requerido';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
+
+              // Fecha de nacimiento: opcional
               GestureDetector(
                 onTap: _pickDate,
                 child: AbsorbPointer(
                   child: PawTextField(
-                    label: 'Fecha de Nacimiento *',
+                    label: 'Fecha de Nacimiento (opcional)',
                     hint: 'Toca para seleccionar',
                     controller: _birthDateController,
-                    validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
                   ),
                 ),
               ),
+
               const SizedBox(height: 28),
+
+              // ── Datos del Dueño ─────────────────────────────────────
               _sectionTitle('Datos del Dueño'),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.lock_outline,
+                      size: 13, color: AppColors.primary.withOpacity(0.6)),
+                  const SizedBox(width: 5),
+                  const Text('Editables desde Configuración',
+                      style: TextStyle(fontSize: 12, color: AppColors.textLight)),
+                ],
+              ),
               const SizedBox(height: 12),
-              PawTextField(
-                label: 'Nombre del dueño *',
-                controller: _ownerNameController,
-                validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
+
+              // Nombre del dueño: solo lectura
+              _readOnlyField(
+                label: 'Nombre del dueño',
+                value: _ownerNameController.text,
+                icon: Icons.person_outline,
               ),
               const SizedBox(height: 16),
-              PawTextField(
-                label: 'Teléfono *',
-                controller: _ownerPhoneController,
-                keyboardType: TextInputType.phone,
-                validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
-              ),
-              const SizedBox(height: 16),
-              PawTextField(
-                label: 'Email (opcional)',
-                controller: _ownerEmailController,
-                keyboardType: TextInputType.emailAddress,
-              ),
+
+              // Teléfono: solo lectura con prefijo +56
+              _readOnlyPhoneField(value: _ownerPhoneController.text),
+
               const SizedBox(height: 36),
+
               _isSaving
                   ? const Center(child: Column(children: [
                 CircularProgressIndicator(color: AppColors.primary),
@@ -256,6 +317,84 @@ class _AddPetScreenState extends State<AddPetScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Campo solo lectura con fondo sutil
+  Widget _readOnlyField({required String label, required String value, required IconData icon}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.inputUnderline.withOpacity(0.5)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.primary.withOpacity(0.7)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
+                const SizedBox(height: 2),
+                Text(
+                  value.isNotEmpty ? value : '—',
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: value.isNotEmpty
+                          ? AppColors.textDark
+                          : AppColors.textLight),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Campo teléfono solo lectura con prefijo +56
+  Widget _readOnlyPhoneField({required String value}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.inputUnderline.withOpacity(0.5)),
+      ),
+      child: Row(
+        children: [
+          const Text('+56',
+              style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14)),
+          const SizedBox(width: 8),
+          Container(width: 1, height: 20, color: AppColors.inputUnderline),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Teléfono',
+                    style: TextStyle(fontSize: 11, color: AppColors.textLight)),
+                const SizedBox(height: 2),
+                Text(
+                  value.isNotEmpty ? value : '—',
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: value.isNotEmpty
+                          ? AppColors.textDark
+                          : AppColors.textLight),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

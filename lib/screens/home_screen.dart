@@ -1,20 +1,28 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:proyecto_1/screens/pest_screen.dart' hide PetsScreen;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
-import 'pest_screen.dart';
+import 'pets_screen.dart';
 import 'calendario_screen.dart';
 import 'qr_scanner_screen.dart';
+import 'historial_screen.dart';
+import 'login_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userName;
   final String userEmail;
   final String userId;
+  final String userPhone;
+  final String userPhotoPath;
 
   const HomeScreen({
     super.key,
     this.userName = 'Usuario',
     this.userEmail = 'usuario@email.com',
     this.userId = '',
+    this.userPhone = '',
+    this.userPhotoPath = '',
   });
 
   @override
@@ -23,7 +31,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  final List<String> _titles = ['Inicio', 'Mascotas', 'Calendario'];
+  final List<String> _titles = ['Inicio', 'Mascotas', 'Calendario', 'Historial'];
+
+  // Estado del perfil (puede cambiar desde Configuración)
+  late String _userName;
+  late String _userPhone;
+  late String _userPhotoPath;
+
+  @override
+  void initState() {
+    super.initState();
+    final nombre = widget.userName.trim();
+    _userName = nombre.isNotEmpty ? nombre : 'Usuario';
+    _userPhone = widget.userPhone;
+    _userPhotoPath = widget.userPhotoPath;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,8 +78,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBody() {
     switch (_selectedIndex) {
-      case 1: return PetsScreen(userId: widget.userId);
+      case 1: return PetsScreen(
+        userId: widget.userId,
+        ownerName: _userName != 'Usuario' ? _userName : '',
+        ownerPhone: _userPhone,
+      );
       case 2: return CalendarioScreen(userId: widget.userId);
+    // Corregido: usuarioId en lugar de userId
+      case 3: return HistorialScreen(usuarioId: widget.userId);
       default: return _buildHome();
     }
   }
@@ -69,6 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Botón cerrar drawer
             Padding(
               padding: const EdgeInsets.only(left: 12, top: 8),
               child: IconButton(
@@ -76,34 +105,47 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () => Navigator.pop(context),
               ),
             ),
+
+            // Perfil centrado
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: AppColors.primary.withOpacity(0.15),
-                    child: const Icon(Icons.person, size: 40, color: AppColors.primary),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(widget.userName,
+              child: Center(
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: AppColors.primary.withOpacity(0.15),
+                      backgroundImage: _userPhotoPath.isNotEmpty
+                          ? FileImage(File(_userPhotoPath))
+                          : null,
+                      child: _userPhotoPath.isEmpty
+                          ? const Icon(Icons.person, size: 44, color: AppColors.primary)
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _userName,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textDark)),
-                  const SizedBox(height: 2),
-                  Text(widget.userEmail,
-                      style: const TextStyle(
-                          fontSize: 12, color: AppColors.textLight)),
-                ],
+                          color: AppColors.textDark),
+                    ),
+
+                  ],
+                ),
               ),
             ),
+
             const SizedBox(height: 16),
             const Divider(color: Color(0xFFDDC4B0), height: 1),
             const SizedBox(height: 8),
+
+            // Menú de navegación
             _drawerItem(icon: Icons.home_outlined, label: 'Inicio', index: 0),
             _drawerItem(icon: Icons.pets_outlined, label: 'Mascotas', index: 1),
             _drawerItem(icon: Icons.calendar_month_outlined, label: 'Calendario', index: 2),
+            _drawerItem(icon: Icons.medical_services_outlined, label: 'Historial Médico', index: 3),
             _drawerItemAction(
               icon: Icons.qr_code_scanner_outlined,
               label: 'Escanear QR',
@@ -113,19 +155,95 @@ class _HomeScreenState extends State<HomeScreen> {
                     MaterialPageRoute(builder: (_) => const QrScannerScreen()));
               },
             ),
+
             const Spacer(),
             const Divider(color: Color(0xFFDDC4B0), height: 1),
+
+            // Configuración
             _drawerItemAction(
               icon: Icons.settings_outlined,
               label: 'Configuración',
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Configuración próximamente'),
-                      backgroundColor: AppColors.primaryLight),
+                final result = await Navigator.push<Map<String, dynamic>>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SettingsScreen(
+                      userId: widget.userId,
+                      currentName: _userName,
+                      currentPhone: _userPhone,
+                      currentPhotoPath: _userPhotoPath,
+                    ),
+                  ),
                 );
+                // Actualizar perfil en el drawer si hubo cambios
+                if (result != null && mounted) {
+                  setState(() {
+                    final nombre = (result['nombre'] ?? '').toString().trim();
+                    _userName = nombre.isNotEmpty ? nombre : 'Usuario';
+                    _userPhone = result['telefono'] ?? _userPhone;
+                    _userPhotoPath = result['foto_path'] ?? _userPhotoPath;
+                  });
+                }
               },
+            ),
+
+            // Botón cerrar sesión
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+              child: ListTile(
+                leading: const Icon(Icons.logout, color: Color(0xFFB94040), size: 22),
+                title: const Text(
+                  'Cerrar sesión',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFB94040)),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: Color(0xFFB94040), size: 20),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final confirmar = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: AppColors.background,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      title: const Text('Cerrar sesión',
+                          style: TextStyle(
+                              color: AppColors.textDark,
+                              fontWeight: FontWeight.w700)),
+                      content: const Text('¿Estás seguro que quieres cerrar sesión?',
+                          style: TextStyle(color: AppColors.textMedium)),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancelar',
+                              style: TextStyle(color: AppColors.textMedium)),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Cerrar sesión',
+                              style: TextStyle(
+                                  color: Color(0xFFB94040),
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmar == true) {
+                    // Cerrar sesión en Supabase y volver al login
+                    await Supabase.instance.client.auth.signOut();
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            (route) => false, // Elimina todo el stack de navegación
+                      );
+                    }
+                  }
+                },
+              ),
             ),
             const SizedBox(height: 16),
           ],
@@ -183,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '¡Hola, ${widget.userName.split(' ').first}! 👋',
+            '¡Hola, ${_userName.split(' ').first}! 👋',
             style: const TextStyle(
                 fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textDark),
           ),
@@ -204,6 +322,14 @@ class _HomeScreenState extends State<HomeScreen> {
             subtitle: 'Vacunas, controles y medicamentos',
             onTap: () => setState(() => _selectedIndex = 2),
             color: AppColors.primaryLight,
+          ),
+          const SizedBox(height: 16),
+          _buildHomeCard(
+            icon: Icons.medical_services,
+            title: 'Historial Médico',
+            subtitle: 'Registros y documentos médicos',
+            onTap: () => setState(() => _selectedIndex = 3),
+            color: const Color(0xFF5A7A3A),
           ),
           const SizedBox(height: 16),
           _buildHomeCard(

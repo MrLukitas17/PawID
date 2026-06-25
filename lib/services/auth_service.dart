@@ -12,14 +12,12 @@ class AuthService {
   }
 
   /// Registra un nuevo usuario
-  /// Retorna null si fue exitoso, o un mensaje de error
   static Future<String?> register({
     required String nombre,
     required String email,
     required String password,
   }) async {
     try {
-      // Verificar si el email ya existe
       final existing = await _client
           .from('usuarios')
           .select('id')
@@ -30,21 +28,21 @@ class AuthService {
         return 'Este email ya está registrado. Inicia sesión.';
       }
 
-      // Crear usuario
       await _client.from('usuarios').insert({
         'nombre': nombre.trim(),
         'email': email.toLowerCase().trim(),
         'password': _hashPassword(password),
+        'telefono': '',
+        'foto_path': '',
       });
 
-      return null; // éxito
+      return null;
     } catch (e) {
       return 'Error al registrar: $e';
     }
   }
 
-  /// Inicia sesión
-  /// Retorna el usuario si fue exitoso, o null si falló
+  /// Inicia sesión — ahora retorna también telefono y foto_path
   static Future<Map<String, dynamic>?> login({
     required String email,
     required String password,
@@ -52,7 +50,7 @@ class AuthService {
     try {
       final result = await _client
           .from('usuarios')
-          .select('id, nombre, email')
+          .select('id, nombre, email, telefono, foto_path')
           .eq('email', email.toLowerCase().trim())
           .eq('password', _hashPassword(password))
           .maybeSingle();
@@ -63,7 +61,7 @@ class AuthService {
     }
   }
 
-  /// Verifica si un email ya existe (para validación en tiempo real)
+  /// Verifica si un email ya existe
   static Future<bool> emailExists(String email) async {
     try {
       final result = await _client
@@ -75,5 +73,19 @@ class AuthService {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Actualiza el perfil del usuario (nombre, teléfono, foto)
+  static Future<void> updateProfile({
+    required String userId,
+    required String nombre,
+    required String telefono,
+    required String fotoPath,
+  }) async {
+    await _client.from('usuarios').update({
+      'nombre': nombre,
+      'telefono': telefono,
+      'foto_path': fotoPath,
+    }).eq('id', userId);
   }
 }
