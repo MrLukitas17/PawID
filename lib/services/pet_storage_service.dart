@@ -24,14 +24,13 @@ class PetStorageService {
         name: m['nombre'],
         species: m['especie'],
         breed: m['raza'],
-        birthDate: m['fecha_nacimiento'],
+        birthDate: m['fecha_nacimiento'] ?? '',
         ownerName: m['dueno_nombre'],
         ownerPhone: m['dueno_telefono'],
-        ownerEmail: m['dueno_email'] ?? '',
+        ownerEmail: '',
         photoPath: m['foto_path']?.isNotEmpty == true ? m['foto_path'] : null,
       )).toList();
     } catch (e) {
-      // Si falla Supabase, carga local
       return loadPetsLocal();
     }
   }
@@ -47,7 +46,6 @@ class PetStorageService {
       'fecha_nacimiento': pet.birthDate,
       'dueno_nombre': pet.ownerName,
       'dueno_telefono': pet.ownerPhone,
-      'dueno_email': pet.ownerEmail,
       'foto_path': pet.photoPath ?? '',
     });
   }
@@ -61,7 +59,6 @@ class PetStorageService {
       'fecha_nacimiento': pet.birthDate,
       'dueno_nombre': pet.ownerName,
       'dueno_telefono': pet.ownerPhone,
-      'dueno_email': pet.ownerEmail,
       'foto_path': pet.photoPath ?? '',
     }).eq('id', pet.id);
   }
@@ -101,7 +98,7 @@ class PetStorageService {
   static Future<List<Pet>> loadPets({String userId = ''}) async {
     if (userId.isNotEmpty) {
       final pets = await loadPetsFromCloud(userId);
-      await savePetsLocal(pets); // backup local
+      await savePetsLocal(pets);
       return pets;
     }
     return loadPetsLocal();
@@ -111,7 +108,6 @@ class PetStorageService {
     if (userId.isNotEmpty) {
       await addPetToCloud(pet, userId);
     }
-    // También guarda local
     final pets = await loadPetsLocal();
     pets.add(pet);
     await savePetsLocal(pets);

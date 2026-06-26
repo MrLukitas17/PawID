@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/registro_medico.dart';
 import '../models/pet.dart';
-
 import '../services/historial_service.dart';
 import '../services/pet_storage_service.dart';
 import '../theme/app_theme.dart';
@@ -11,8 +10,14 @@ import '../widgets/paw_text_field.dart';
 
 class AddHistorialScreen extends StatefulWidget {
   final String userId;
+  // Si se pasa un registro, entra en modo edición
+  final RegistroMedico? registro;
 
-  const AddHistorialScreen({super.key, required this.userId});
+  const AddHistorialScreen({
+    super.key,
+    required this.userId,
+    this.registro,
+  });
 
   @override
   State<AddHistorialScreen> createState() => _AddHistorialScreenState();
@@ -30,10 +35,22 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
   String? _photoPath;
   bool _saving = false;
 
+  bool get _isEditing => widget.registro != null;
+
   @override
   void initState() {
     super.initState();
     _loadPets();
+    // Si es edición, pre-rellena los campos
+    if (_isEditing) {
+      final r = widget.registro!;
+      _nameController.text = r.nombre;
+      _dateController.text = r.fecha;
+      _notesController.text = r.notas;
+      _petId = r.mascotaId;
+      _petName = r.mascotaNombre;
+      _photoPath = r.fotoUrl.isNotEmpty ? r.fotoUrl : null;
+    }
   }
 
   @override
@@ -48,7 +65,8 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
     final pets = await PetStorageService.loadPets(userId: widget.userId);
     setState(() {
       _pets = pets;
-      if (pets.isNotEmpty) {
+      // Solo asigna primera mascota si es modo nuevo y no hay petId
+      if (pets.isNotEmpty && _petId == null) {
         _petId = pets.first.id;
         _petName = pets.first.name;
       }
@@ -96,8 +114,7 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
           children: [
             const SizedBox(height: 12),
             Container(
-              width: 40,
-              height: 4,
+              width: 40, height: 4,
               decoration: BoxDecoration(
                 color: AppColors.textLight,
                 borderRadius: BorderRadius.circular(2),
@@ -106,16 +123,15 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.camera_alt, color: AppColors.primary),
-              title: const Text('Take photo'),
+              title: const Text('Tomar foto'),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickPhoto(ImageSource.camera);
               },
             ),
             ListTile(
-              leading:
-              const Icon(Icons.photo_library, color: AppColors.primary),
-              title: const Text('Choose from gallery'),
+              leading: const Icon(Icons.photo_library, color: AppColors.primary),
+              title: const Text('Elegir de galería'),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickPhoto(ImageSource.gallery);
@@ -143,7 +159,7 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not get image: $e'),
+            content: Text('No se pudo obtener la imagen: $e'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -156,7 +172,7 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
     if (_petId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a pet'),
+          content: Text('Selecciona una mascota'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -167,8 +183,11 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
     setState(() => _saving = true);
 
     try {
-      final record = RegistroMedico(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+      final registro = RegistroMedico(
+        // En edición conserva el id original
+        id: _isEditing
+            ? widget.registro!.id
+            : DateTime.now().millisecondsSinceEpoch.toString(),
         usuarioId: widget.userId,
         mascotaId: _petId!,
         mascotaNombre: _petName,
@@ -178,14 +197,20 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
         notas: _notesController.text.trim(),
       );
 
-      await ServicioHistorial.agregarRegistro(record);
+      if (_isEditing) {
+        await ServicioHistorial.actualizarRegistro(registro);
+      } else {
+        await ServicioHistorial.agregarRegistro(registro);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Record saved'),
+          SnackBar(
+            content: Text(_isEditing
+                ? '✅ Registro actualizado'
+                : '✅ Registro guardado'),
             backgroundColor: AppColors.primary,
-            duration: Duration(seconds: 1),
+            duration: const Duration(seconds: 1),
           ),
         );
         await Future.delayed(const Duration(milliseconds: 600));
@@ -195,7 +220,7 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error saving: $e'),
+            content: Text('Error al guardar: $e'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -211,9 +236,9 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text(
-          'New Medical Record',
-          style: TextStyle(
+        title: Text(
+          _isEditing ? 'Editar Registro' : 'Nuevo Registro Médico',
+          style: const TextStyle(
               color: AppColors.textDark, fontWeight: FontWeight.w700),
         ),
         iconTheme: const IconThemeData(color: AppColors.primary),
@@ -228,21 +253,21 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
               const SizedBox(height: 8),
 
               // Selector de mascota
-              _sectionTitle('Pet'),
+              _sectionTitle('Mascota'),
               const SizedBox(height: 12),
               _pets.isEmpty
-                  ? const Text('No pets registered',
+                  ? const Text('No tienes mascotas registradas',
                   style: TextStyle(color: AppColors.textMedium))
                   : DropdownButtonFormField<String>(
                 value: _petId,
                 decoration: const InputDecoration(
-                  labelText: 'Select a pet *',
+                  labelText: 'Selecciona la mascota *',
                   enabledBorder: UnderlineInputBorder(
                       borderSide: BorderSide(
                           color: AppColors.inputUnderline, width: 1.5)),
                   focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(
-                          color: AppColors.primary, width: 2)),
+                      borderSide:
+                      BorderSide(color: AppColors.primary, width: 2)),
                   contentPadding: EdgeInsets.symmetric(vertical: 8),
                 ),
                 dropdownColor: AppColors.background,
@@ -270,16 +295,18 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
               ),
 
               const SizedBox(height: 24),
-              _sectionTitle('Record Details'),
+
+              // Detalles del registro
+              _sectionTitle('Detalles del Registro'),
               const SizedBox(height: 12),
 
               // Nombre del registro
               PawTextField(
-                label: 'Record name *',
-                hint: 'e.g. Annual checkup, Rabies vaccine...',
+                label: 'Nombre del registro *',
+                hint: 'Ej: Control anual, Vacuna antirrábica...',
                 controller: _nameController,
                 validator: (v) =>
-                v == null || v.isEmpty ? 'Required field' : null,
+                v == null || v.isEmpty ? 'Campo requerido' : null,
               ),
               const SizedBox(height: 16),
 
@@ -288,8 +315,8 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
                 onTap: _selectDate,
                 child: AbsorbPointer(
                   child: PawTextField(
-                    label: 'Date (optional)',
-                    hint: 'Tap to select',
+                    label: 'Fecha (opcional)',
+                    hint: 'Toca para seleccionar',
                     controller: _dateController,
                   ),
                 ),
@@ -298,16 +325,17 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
 
               // Notas (opcional)
               PawTextField(
-                label: 'Notes (optional)',
-                hint: "Vet's observations...",
+                label: 'Notas (opcional)',
+                hint: 'Observaciones del veterinario...',
                 controller: _notesController,
               ),
 
               const SizedBox(height: 24),
-              _sectionTitle('Photo or Document'),
+
+              // Foto o documento
+              _sectionTitle('Foto o Documento'),
               const SizedBox(height: 12),
 
-              // Selector de foto
               _photoPath != null ? _photoPreview() : _addPhotoButton(),
 
               const SizedBox(height: 36),
@@ -315,11 +343,12 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
               // Botón guardar
               _saving
                   ? const Center(
-                  child: CircularProgressIndicator(
-                      color: AppColors.primary))
+                  child: CircularProgressIndicator(color: AppColors.primary))
                   : ElevatedButton(
                 onPressed: _save,
-                child: const Text('Save Record'),
+                child: Text(_isEditing
+                    ? 'Guardar Cambios'
+                    : 'Guardar Registro'),
               ),
 
               const SizedBox(height: 32),
@@ -342,7 +371,6 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
           border: Border.all(
             color: AppColors.primary.withOpacity(0.3),
             width: 1.5,
-            style: BorderStyle.solid,
           ),
         ),
         child: const Column(
@@ -351,7 +379,7 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
             Icon(Icons.add_photo_alternate_outlined,
                 size: 36, color: AppColors.primary),
             SizedBox(height: 8),
-            Text('Tap to add photo or document',
+            Text('Toca para agregar foto o documento',
                 style: TextStyle(color: AppColors.textMedium, fontSize: 13)),
           ],
         ),
@@ -380,8 +408,7 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
           ),
         ),
         Positioned(
-          top: 8,
-          right: 8,
+          top: 8, right: 8,
           child: GestureDetector(
             onTap: () => setState(() => _photoPath = null),
             child: Container(
@@ -390,14 +417,12 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
                 color: Colors.redAccent,
                 shape: BoxShape.circle,
               ),
-              child:
-              const Icon(Icons.close, color: Colors.white, size: 18),
+              child: const Icon(Icons.close, color: Colors.white, size: 18),
             ),
           ),
         ),
         Positioned(
-          bottom: 8,
-          right: 8,
+          bottom: 8, right: 8,
           child: GestureDetector(
             onTap: _selectPhoto,
             child: Container(

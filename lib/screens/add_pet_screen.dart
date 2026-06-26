@@ -39,7 +39,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
   bool _isSaving = false;
 
   final List<String> _species = [
-    'Perro', 'Gato', 'Ave', 'Conejo', 'Reptil', 'Otro'
+    'Perro', 'Gato', 'Aves', 'Roedores', 'Reptiles', 'Peces', 'Otro'
   ];
 
   bool get _isEditing => widget.pet != null;
@@ -210,18 +210,18 @@ class _AddPetScreenState extends State<AddPetScreen> {
               _sectionTitle('Datos de la Mascota'),
               const SizedBox(height: 12),
 
-              // Nombre: solo letras, máximo 50 caracteres
+              // Nombre: solo letras, máximo 150 caracteres
               TextFormField(
                 controller: _nameController,
                 style: const TextStyle(color: AppColors.textDark, fontSize: 14),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(
                       RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
-                  LengthLimitingTextInputFormatter(50),
+                  LengthLimitingTextInputFormatter(150),
                 ],
                 decoration: const InputDecoration(
                   labelText: 'Nombre *',
-                  hintText: 'Solo letras, máx. 50 caracteres',
+                  hintText: 'Solo letras, máx. 150 caracteres',
                   enabledBorder: UnderlineInputBorder(
                       borderSide: BorderSide(color: AppColors.inputUnderline, width: 1.5)),
                   focusedBorder: UnderlineInputBorder(
@@ -237,18 +237,18 @@ class _AddPetScreenState extends State<AddPetScreen> {
               _buildSpeciesDropdown(),
               const SizedBox(height: 16),
 
-              // Raza: solo letras, máximo 50 caracteres
+              // Raza: solo letras, máximo 15 caracteres
               TextFormField(
                 controller: _breedController,
                 style: const TextStyle(color: AppColors.textDark, fontSize: 14),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(
                       RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
-                  LengthLimitingTextInputFormatter(50),
+                  LengthLimitingTextInputFormatter(15),
                 ],
                 decoration: const InputDecoration(
                   labelText: 'Raza *',
-                  hintText: 'Solo letras, máx. 50 caracteres',
+                  hintText: 'Solo letras, máx. 15 caracteres',
                   enabledBorder: UnderlineInputBorder(
                       borderSide: BorderSide(color: AppColors.inputUnderline, width: 1.5)),
                   focusedBorder: UnderlineInputBorder(

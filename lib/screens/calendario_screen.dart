@@ -40,14 +40,9 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     return _eventos.where((e) => e.fecha == fechaStr).toList();
   }
 
-  // Todos los eventos futuros (próximos)
-  List<Evento> get _proximosEventos {
-    final hoy = DateTime.now();
-    return _eventos
-        .where((e) =>
-    !e.completado &&
-        e.fechaDateTime.isAfter(hoy.subtract(const Duration(days: 1))))
-        .toList()
+  // TODOS los eventos ordenados por fecha (sin filtrar)
+  List<Evento> get _todosLosEventos {
+    return [..._eventos]
       ..sort((a, b) => a.fechaDateTime.compareTo(b.fechaDateTime));
   }
 
@@ -63,8 +58,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
         backgroundColor: AppColors.background,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Eliminar evento',
-            style: TextStyle(
-                color: AppColors.textDark, fontWeight: FontWeight.w700)),
+            style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w700)),
         content: Text('¿Eliminar "${evento.titulo}"?',
             style: const TextStyle(color: AppColors.textMedium)),
         actions: [
@@ -76,8 +70,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Eliminar',
-                style: TextStyle(
-                    color: Colors.redAccent, fontWeight: FontWeight.w700)),
+                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -125,8 +118,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
         child: const Icon(Icons.add, color: AppColors.white),
       ),
       body: _loading
-          ? const Center(
-          child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : Column(
         children: [
           // Calendario
@@ -147,8 +139,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
               firstDay: DateTime.utc(2023, 1, 1),
               lastDay: DateTime.utc(2030, 12, 31),
               focusedDay: _focusedDay,
-              selectedDayPredicate: (day) =>
-                  isSameDay(_selectedDay, day),
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
               eventLoader: _getEventosDelDia,
               startingDayOfWeek: StartingDayOfWeek.monday,
               calendarStyle: CalendarStyle(
@@ -161,7 +152,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                   color: Colors.transparent,
                   shape: BoxShape.circle,
                 ),
-                todayTextStyle: TextStyle(
+                todayTextStyle: const TextStyle(
                   color: AppColors.primary,
                   fontWeight: FontWeight.bold,
                 ),
@@ -169,8 +160,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                   color: AppColors.accent,
                   shape: BoxShape.circle,
                 ),
-                weekendTextStyle:
-                const TextStyle(color: AppColors.accent),
+                weekendTextStyle: const TextStyle(color: AppColors.accent),
               ),
               headerStyle: const HeaderStyle(
                 formatButtonVisible: false,
@@ -179,14 +169,17 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                     color: AppColors.textDark,
                     fontWeight: FontWeight.w700,
                     fontSize: 16),
-                leftChevronIcon: Icon(Icons.chevron_left,
-                    color: AppColors.primary),
-                rightChevronIcon: Icon(Icons.chevron_right,
-                    color: AppColors.primary),
+                leftChevronIcon: Icon(Icons.chevron_left, color: AppColors.primary),
+                rightChevronIcon: Icon(Icons.chevron_right, color: AppColors.primary),
               ),
               onDaySelected: (selected, focused) {
                 setState(() {
-                  _selectedDay = selected;
+                  // Si toca el mismo día seleccionado, lo deselecciona
+                  if (isSameDay(_selectedDay, selected)) {
+                    _selectedDay = null;
+                  } else {
+                    _selectedDay = selected;
+                  }
                   _focusedDay = focused;
                 });
               },
@@ -199,32 +192,56 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
           const SizedBox(height: 16),
 
           // Lista de eventos
-          Expanded(
-            child: _buildEventList(),
-          ),
+          Expanded(child: _buildEventList()),
         ],
       ),
     );
   }
 
   Widget _buildEventList() {
+    // Si el día seleccionado tiene eventos, muestra solo esos
     final eventosDelDia = _selectedDay != null
         ? _getEventosDelDia(_selectedDay!)
         : <Evento>[];
 
     if (eventosDelDia.isNotEmpty) {
-      // Mostrar eventos del día seleccionado
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Día seleccionado (${eventosDelDia.length})',
-              style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary),
+            child: Row(
+              children: [
+                Text(
+                  'Día seleccionado (${eventosDelDia.length})',
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary),
+                ),
+                const Spacer(),
+                // Botón para deseleccionar el día
+                GestureDetector(
+                  onTap: () => setState(() => _selectedDay = null),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.close, size: 12, color: AppColors.primary),
+                        SizedBox(width: 4),
+                        Text('Ver todos',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
@@ -239,8 +256,10 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
       );
     }
 
-    // Mostrar próximos eventos
-    if (_proximosEventos.isEmpty) {
+    // Si no hay eventos en el día, muestra TODOS ordenados por fecha
+    final todos = _todosLosEventos;
+
+    if (todos.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -248,7 +267,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
             Icon(Icons.calendar_today,
                 size: 56, color: AppColors.primary.withOpacity(0.3)),
             const SizedBox(height: 16),
-            const Text('No hay eventos próximos',
+            const Text('No hay eventos agendados',
                 style: TextStyle(
                     fontSize: 16,
                     color: AppColors.textMedium,
@@ -264,22 +283,20 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'Próximos eventos',
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary),
+            'Todos los eventos (${todos.length})',
+            style: const TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary),
           ),
         ),
         const SizedBox(height: 8),
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
-            itemCount: _proximosEventos.length,
-            itemBuilder: (_, i) => _buildEventCard(_proximosEventos[i]),
+            itemCount: todos.length,
+            itemBuilder: (_, i) => _buildEventCard(todos[i]),
           ),
         ),
       ],
@@ -301,11 +318,9 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
         ],
       ),
       child: ListTile(
-        contentPadding:
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
-          width: 44,
-          height: 44,
+          width: 44, height: 44,
           decoration: BoxDecoration(
             color: color.withOpacity(0.15),
             shape: BoxShape.circle,
@@ -330,22 +345,18 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
           children: [
             Text(
               '${evento.mascotaNombre} · ${evento.tipoLabel}',
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.textMedium),
+              style: const TextStyle(fontSize: 12, color: AppColors.textMedium),
             ),
             Text(
               evento.hora.isNotEmpty
                   ? '${_formatFecha(evento.fecha)} a las ${evento.hora}'
                   : _formatFecha(evento.fecha),
               style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: FontWeight.w600),
+                  fontSize: 12, color: color, fontWeight: FontWeight.w600),
             ),
             if (evento.descripcion.isNotEmpty)
               Text(evento.descripcion,
-                  style: const TextStyle(
-                      fontSize: 11, color: AppColors.textLight)),
+                  style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
           ],
         ),
         trailing: Row(
@@ -367,8 +378,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
               },
               child: const Padding(
                 padding: EdgeInsets.all(4),
-                child: Icon(Icons.edit_outlined,
-                    color: AppColors.textLight, size: 20),
+                child: Icon(Icons.edit_outlined, color: AppColors.textLight, size: 20),
               ),
             ),
             // Eliminar
@@ -376,8 +386,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
               onTap: () => _deleteEvento(evento),
               child: const Padding(
                 padding: EdgeInsets.all(4),
-                child: Icon(Icons.delete_outline,
-                    color: Colors.redAccent, size: 20),
+                child: Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
               ),
             ),
           ],

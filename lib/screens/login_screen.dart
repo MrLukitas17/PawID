@@ -4,6 +4,7 @@ import '../widgets/paw_text_field.dart';
 import '../services/auth_service.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -116,6 +117,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
 
+                // Link ¿Olvidaste tu contraseña?
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen()),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.only(top: 10),
+                      child: Text(
+                        '¿Olvidaste tu contraseña?',
+                        style: TextStyle(
+                          color: AppColors.linkColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
                 // Mensaje de error
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 16),
@@ -125,11 +149,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: BoxDecoration(
                       color: Colors.redAccent.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                      border: Border.all(
+                          color: Colors.redAccent.withOpacity(0.3)),
                     ),
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                      style: const TextStyle(
+                          color: Colors.redAccent, fontSize: 13),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -150,10 +176,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text('¿No tienes cuenta? ',
-                        style: TextStyle(color: AppColors.textMedium, fontSize: 13)),
+                        style: TextStyle(
+                            color: AppColors.textMedium, fontSize: 13)),
                     GestureDetector(
-                      onTap: () => Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const RegisterScreen())),
                       child: const Text('Regístrate',
                           style: TextStyle(
                               color: AppColors.linkColor,

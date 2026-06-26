@@ -28,8 +28,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
 
   Future<void> _loadHistorial() async {
     setState(() => _loading = true);
-    final registros =
-    await ServicioHistorial.cargarHistorialNube(widget.usuarioId);
+    final registros = await ServicioHistorial.cargarHistorialNube(widget.usuarioId);
     if (mounted) {
       setState(() {
         _registros = registros;
@@ -42,8 +41,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
     return _registros.where((r) {
       final matchesName =
       r.nombre.toLowerCase().contains(_searchFilter.toLowerCase());
-      final matchesPet =
-          _petFilter == null || r.mascotaNombre == _petFilter;
+      final matchesPet = _petFilter == null || r.mascotaNombre == _petFilter;
       return matchesName && matchesPet;
     }).toList();
   }
@@ -54,16 +52,28 @@ class _HistorialScreenState extends State<HistorialScreen> {
     return names;
   }
 
+  // Navegar a editar registro
+  Future<void> _editRecord(RegistroMedico registro) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddHistorialScreen(
+          userId: widget.usuarioId,
+          registro: registro,
+        ),
+      ),
+    );
+    if (updated == true) await _loadHistorial();
+  }
+
   Future<void> _deleteRecord(RegistroMedico registro) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.background,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Eliminar registro',
-            style: TextStyle(
-                color: AppColors.textDark, fontWeight: FontWeight.w700)),
+            style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w700)),
         content: Text('¿Eliminar "${registro.nombre}"?',
             style: const TextStyle(color: AppColors.textMedium)),
         actions: [
@@ -75,8 +85,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Eliminar',
-                style: TextStyle(
-                    color: Colors.redAccent, fontWeight: FontWeight.w700)),
+                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -99,14 +108,12 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 File(path),
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const Center(
-                  child: Icon(Icons.broken_image,
-                      color: Colors.white, size: 64),
+                  child: Icon(Icons.broken_image, color: Colors.white, size: 64),
                 ),
               ),
             ),
             Positioned(
-              top: 8,
-              right: 8,
+              top: 8, right: 8,
               child: GestureDetector(
                 onTap: () => Navigator.pop(ctx),
                 child: Container(
@@ -115,8 +122,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                     color: Colors.black54,
                     shape: BoxShape.circle,
                   ),
-                  child:
-                  const Icon(Icons.close, color: Colors.white, size: 20),
+                  child: const Icon(Icons.close, color: Colors.white, size: 20),
                 ),
               ),
             ),
@@ -152,8 +158,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
           final added = await Navigator.push<bool>(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  AddHistorialScreen(userId: widget.usuarioId),
+              builder: (_) => AddHistorialScreen(userId: widget.usuarioId),
             ),
           );
           if (added == true) await _loadHistorial();
@@ -161,9 +166,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
         child: const Icon(Icons.add, color: AppColors.white),
       ),
       body: _loading
-          ? const Center(
-          child:
-          CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : Column(
         children: [
           // Buscador
@@ -173,24 +176,21 @@ class _HistorialScreenState extends State<HistorialScreen> {
               onChanged: (v) => setState(() => _searchFilter = v),
               decoration: InputDecoration(
                 hintText: 'Buscar registro...',
-                prefixIcon: const Icon(Icons.search,
-                    color: AppColors.textMedium),
+                prefixIcon: const Icon(Icons.search, color: AppColors.textMedium),
                 filled: true,
                 fillColor: AppColors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding:
-                const EdgeInsets.symmetric(vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              style:
-              const TextStyle(color: AppColors.textDark),
+              style: const TextStyle(color: AppColors.textDark),
             ),
           ),
 
-          // Filtro por mascota
-          if (_petNames.length > 1)
+          // Filtro por mascota (aparece siempre que haya mascotas)
+          if (_petNames.isNotEmpty)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -209,11 +209,9 @@ class _HistorialScreenState extends State<HistorialScreen> {
             child: _filteredRecords.isEmpty
                 ? _buildEmpty()
                 : ListView.builder(
-              padding:
-              const EdgeInsets.fromLTRB(16, 0, 16, 80),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
               itemCount: _filteredRecords.length,
-              itemBuilder: (_, i) =>
-                  _recordCard(_filteredRecords[i]),
+              itemBuilder: (_, i) => _recordCard(_filteredRecords[i]),
             ),
           ),
         ],
@@ -227,15 +225,12 @@ class _HistorialScreenState extends State<HistorialScreen> {
       onTap: () => setState(() => _petFilter = value),
       child: Container(
         margin: const EdgeInsets.only(right: 8),
-        padding:
-        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : AppColors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected
-                ? AppColors.primary
-                : AppColors.primary.withOpacity(0.2),
+            color: selected ? AppColors.primary : AppColors.primary.withOpacity(0.2),
           ),
         ),
         child: Text(
@@ -265,8 +260,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           const Text('Toca + para agregar el primer registro',
-              style:
-              TextStyle(fontSize: 13, color: AppColors.textLight)),
+              style: TextStyle(fontSize: 13, color: AppColors.textLight)),
         ],
       ),
     );
@@ -297,8 +291,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 width: double.infinity,
                 height: 160,
                 decoration: const BoxDecoration(
-                  borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(14)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Stack(
@@ -314,8 +307,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                       ),
                     ),
                     Positioned(
-                      bottom: 8,
-                      right: 8,
+                      bottom: 8, right: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
@@ -326,12 +318,10 @@ class _HistorialScreenState extends State<HistorialScreen> {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.zoom_in,
-                                color: Colors.white, size: 14),
+                            Icon(Icons.zoom_in, color: Colors.white, size: 14),
                             SizedBox(width: 4),
                             Text('Ver foto',
-                                style: TextStyle(
-                                    color: Colors.white, fontSize: 11)),
+                                style: TextStyle(color: Colors.white, fontSize: 11)),
                           ],
                         ),
                       ),
@@ -355,18 +345,31 @@ class _HistorialScreenState extends State<HistorialScreen> {
                               fontWeight: FontWeight.w700,
                               color: AppColors.textDark)),
                     ),
+                    // Botón editar
+                    GestureDetector(
+                      onTap: () => _editRecord(registro),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(Icons.edit_outlined,
+                            color: AppColors.textLight, size: 20),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    // Botón eliminar
                     GestureDetector(
                       onTap: () => _deleteRecord(registro),
-                      child: const Icon(Icons.delete_outline,
-                          color: Colors.redAccent, size: 20),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(Icons.delete_outline,
+                            color: Colors.redAccent, size: 20),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.pets,
-                        size: 14, color: AppColors.primary),
+                    const Icon(Icons.pets, size: 14, color: AppColors.primary),
                     const SizedBox(width: 4),
                     Text(registro.mascotaNombre,
                         style: const TextStyle(
@@ -380,8 +383,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                       const SizedBox(width: 4),
                       Text(registro.fecha,
                           style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textMedium)),
+                              fontSize: 13, color: AppColors.textMedium)),
                     ],
                   ],
                 ),

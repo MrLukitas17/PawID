@@ -8,7 +8,6 @@ import 'pet_detail_screen.dart';
 
 class PetsScreen extends StatefulWidget {
   final String userId;
-  // Datos del dueño que vienen del perfil configurado
   final String ownerName;
   final String ownerPhone;
 
@@ -27,6 +26,14 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
   List<Pet> _pets = [];
   bool _loading = true;
   String? _error;
+
+  // Filtros
+  String _searchQuery = '';
+  String? _speciesFilter;
+
+  final List<String> _allSpecies = [
+    'Perro', 'Gato', 'Aves', 'Roedores', 'Reptiles', 'Peces', 'Otro'
+  ];
 
   @override
   void initState() {
@@ -57,13 +64,27 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
     }
   }
 
+  // Mascotas filtradas por nombre y especie
+  List<Pet> get _filteredPets {
+    return _pets.where((p) {
+      final matchesName = p.name.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesSpecies = _speciesFilter == null || p.species == _speciesFilter;
+      return matchesName && matchesSpecies;
+    }).toList();
+  }
+
+  // Solo muestra chips de especies que existen en la lista
+  List<String> get _availableSpecies {
+    final existing = _pets.map((p) => p.species).toSet();
+    return _allSpecies.where((s) => existing.contains(s)).toList();
+  }
+
   Future<void> _goToAddPet() async {
     final added = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => AddPetScreen(
           userId: widget.userId,
-          // Pasa los datos del perfil para pre-rellenar
           defaultOwnerName: widget.ownerName,
           defaultOwnerPhone: widget.ownerPhone,
         ),
@@ -122,9 +143,88 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
           Text('Cargando mascotas...', style: TextStyle(color: AppColors.textMedium)),
         ],
       ))
-          : _error != null ? _buildError()
-          : _pets.isEmpty ? _buildEmpty()
-          : _buildList(),
+          : _error != null
+          ? _buildError()
+          : Column(
+        children: [
+          // Buscador
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: TextField(
+              onChanged: (v) => setState(() => _searchQuery = v),
+              decoration: InputDecoration(
+                hintText: 'Buscar mascota...',
+                prefixIcon: const Icon(Icons.search, color: AppColors.textMedium),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.textLight, size: 18),
+                  onPressed: () => setState(() => _searchQuery = ''),
+                )
+                    : null,
+                filled: true,
+                fillColor: AppColors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              style: const TextStyle(color: AppColors.textDark),
+            ),
+          ),
+
+          // Chips de especie (solo si hay más de una especie)
+          if (_availableSpecies.length > 1)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(
+                children: [
+                  _speciesChip('Todos', null),
+                  ..._availableSpecies.map((s) => _speciesChip(s, s)),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 8),
+
+          // Lista o estado vacío
+          Expanded(
+            child: _pets.isEmpty
+                ? _buildEmpty()
+                : _filteredPets.isEmpty
+                ? _buildNoResults()
+                : _buildList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Chip de filtro por especie
+  Widget _speciesChip(String label, String? value) {
+    final selected = _speciesFilter == value;
+    return GestureDetector(
+      onTap: () => setState(() => _speciesFilter = value),
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.primary.withOpacity(0.2),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected ? AppColors.white : AppColors.primary,
+          ),
+        ),
+      ),
     );
   }
 
@@ -169,14 +269,41 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
     );
   }
 
+  // Cuando hay mascotas pero no coinciden con el filtro
+  Widget _buildNoResults() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off, size: 56, color: AppColors.primary.withOpacity(0.3)),
+          const SizedBox(height: 16),
+          const Text('Sin resultados',
+              style: TextStyle(fontSize: 17, color: AppColors.textMedium, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          const Text('Intenta con otro nombre o especie',
+              style: TextStyle(fontSize: 13, color: AppColors.textLight)),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () => setState(() {
+              _searchQuery = '';
+              _speciesFilter = null;
+            }),
+            child: const Text('Limpiar filtros',
+                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildList() {
     return RefreshIndicator(
       color: AppColors.primary,
       onRefresh: _loadPets,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-        itemCount: _pets.length,
-        itemBuilder: (context, index) => _buildPetCard(_pets[index]),
+        itemCount: _filteredPets.length,
+        itemBuilder: (context, index) => _buildPetCard(_filteredPets[index]),
       ),
     );
   }

@@ -75,6 +75,44 @@ class AuthService {
     }
   }
 
+  /// Carga el perfil actualizado del usuario
+  static Future<Map<String, dynamic>?> loadProfile(String userId) async {
+    try {
+      final result = await _client
+          .from('usuarios')
+          .select('id, nombre, email, telefono, foto_path')
+          .eq('id', userId)
+          .maybeSingle();
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Busca un usuario por email (para recuperar contraseña)
+  static Future<Map<String, dynamic>?> findUserByEmail(String email) async {
+    try {
+      final result = await _client
+          .from('usuarios')
+          .select('id, email')
+          .eq('email', email.toLowerCase().trim())
+          .maybeSingle();
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Cambia la contraseña del usuario
+  static Future<void> changePassword({
+    required String userId,
+    required String newPassword,
+  }) async {
+    await _client.from('usuarios').update({
+      'password': _hashPassword(newPassword),
+    }).eq('id', userId);
+  }
+
   /// Actualiza el perfil del usuario (nombre, teléfono, foto)
   static Future<void> updateProfile({
     required String userId,

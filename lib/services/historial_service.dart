@@ -37,6 +37,22 @@ class ServicioHistorial {
     await _guardarLocal(lista);
   }
 
+  // Método para actualizar un registro existente
+  static Future<void> actualizarRegistro(RegistroMedico registro) async {
+    try {
+      await _cliente
+          .from('historial_medico')
+          .update(registro.toJson())
+          .eq('id', registro.id);
+    } catch (_) {}
+    final lista = await _cargarLocal();
+    final i = lista.indexWhere((r) => r.id == registro.id);
+    if (i != -1) {
+      lista[i] = registro;
+      await _guardarLocal(lista);
+    }
+  }
+
   static Future<void> eliminarRegistro(String id) async {
     try {
       await _cliente.from('historial_medico').delete().eq('id', id);
