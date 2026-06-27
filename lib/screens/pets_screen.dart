@@ -258,12 +258,6 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
           const SizedBox(height: 8),
           const Text('Toca el botón + para agregar tu primera mascota',
               style: TextStyle(fontSize: 13, color: AppColors.textLight), textAlign: TextAlign.center),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _goToAddPet,
-            icon: const Icon(Icons.add),
-            label: const Text('Agregar mascota'),
-          ),
         ],
       ),
     );
