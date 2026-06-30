@@ -336,7 +336,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             const Text('Toca + para agregar un evento',
-                style: TextStyle(fontSize: 13, color: AppColors.textLight)),
+                style: TextStyle(fontSize: 13, color: Color(0xFF202123))),
           ],
         ),
       );

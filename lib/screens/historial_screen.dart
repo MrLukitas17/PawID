@@ -283,7 +283,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                           'Toca + para agregar el primer registro',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                              color: Color(0xFF9A9FA7),
+                              color: Color(0xFF202123),
                               fontSize: 10,
                               fontWeight: FontWeight.w400),
                         ),

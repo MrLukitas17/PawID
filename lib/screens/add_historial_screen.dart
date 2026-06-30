@@ -240,123 +240,126 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
         ),
         iconTheme: const IconThemeData(color: AppColors.primary),
       ),
-      body: Stack(
-        children: [
-          // Fondo
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/historial_medico.png',
-              fit: BoxFit.cover,
+      body: SizedBox(
+        width: double.infinity,
+        height: MediaQuery.of(context).size.height,
+        child: Stack(
+          children: [
+            // Fondo
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/historial_medico.png',
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-          // Contenido
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.96), // Fondo gris/blanco semitransparente
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 8),
-                      _sectionTitle('Mascota'),
-                      const SizedBox(height: 12),
-                      _pets.isEmpty
-                          ? const Text('No tienes mascotas registradas',
-                          style: TextStyle(color: AppColors.textMedium))
-                          : DropdownButtonFormField<String>(
-                        value: _petId,
-                        decoration: const InputDecoration(
-                          labelText: 'Selecciona la mascota *',
-                          enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                  color: AppColors.inputUnderline, width: 1.5)),
-                          focusedBorder: UnderlineInputBorder(
-                              borderSide:
-                              BorderSide(color: AppColors.primary, width: 2)),
-                          contentPadding: EdgeInsets.symmetric(vertical: 8),
-                        ),
-                        dropdownColor: AppColors.background,
-                        style: const TextStyle(
-                            color: AppColors.textDark, fontSize: 14),
-                        items: _pets
-                            .map((p) => DropdownMenuItem(
-                          value: p.id,
-                          child: Row(
-                            children: [
-                              const Icon(Icons.pets,
-                                  size: 16, color: AppColors.primary),
-                              const SizedBox(width: 8),
-                              Text(p.name),
-                            ],
+            // Contenido
+            SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.96),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        _sectionTitle('Mascota'),
+                        const SizedBox(height: 12),
+                        _pets.isEmpty
+                            ? const Text('No tienes mascotas registradas',
+                            style: TextStyle(color: AppColors.textMedium))
+                            : DropdownButtonFormField<String>(
+                          value: _petId,
+                          decoration: const InputDecoration(
+                            labelText: 'Selecciona la mascota *',
+                            enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                    color: AppColors.inputUnderline, width: 1.5)),
+                            focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                    color: AppColors.primary, width: 2)),
+                            contentPadding: EdgeInsets.symmetric(vertical: 8),
                           ),
-                        ))
-                            .toList(),
-                        onChanged: (v) {
-                          setState(() {
-                            _petId = v;
-                            _petName = _pets.firstWhere((p) => p.id == v).name;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      _sectionTitle('Detalles del Registro'),
-                      const SizedBox(height: 12),
-                      PawTextField(
-                        label: 'Nombre del registro *',
-                        hint: 'Ej: Control anual, Vacuna antirrábica...',
-                        controller: _nameController,
-                        validator: (v) =>
-                        v == null || v.isEmpty ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      GestureDetector(
-                        onTap: _selectDate,
-                        child: AbsorbPointer(
-                          child: PawTextField(
-                            label: 'Fecha (opcional)',
-                            hint: 'Toca para seleccionar',
-                            controller: _dateController,
+                          dropdownColor: AppColors.background,
+                          style: const TextStyle(
+                              color: AppColors.textDark, fontSize: 14),
+                          items: _pets
+                              .map((p) => DropdownMenuItem(
+                            value: p.id,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.pets,
+                                    size: 16, color: AppColors.primary),
+                                const SizedBox(width: 8),
+                                Text(p.name),
+                              ],
+                            ),
+                          ))
+                              .toList(),
+                          onChanged: (v) {
+                            setState(() {
+                              _petId = v;
+                              _petName =
+                                  _pets.firstWhere((p) => p.id == v).name;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        _sectionTitle('Detalles del Registro'),
+                        const SizedBox(height: 12),
+                        PawTextField(
+                          label: 'Nombre del registro *',
+                          hint: 'Ej: Control anual, Vacuna antirrábica...',
+                          controller: _nameController,
+                          validator: (v) =>
+                          v == null || v.isEmpty ? 'Campo requerido' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: _selectDate,
+                          child: AbsorbPointer(
+                            child: PawTextField(
+                              label: 'Fecha (opcional)',
+                              hint: 'Toca para seleccionar',
+                              controller: _dateController,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      PawTextField(
-                        label: 'Notas (opcional)',
-                        hint: 'Observaciones del veterinario...',
-                        controller: _notesController,
-                      ),
-                      const SizedBox(height: 24),
-                      _sectionTitle('Foto o Documento'),
-                      const SizedBox(height: 12),
-                      _photoPath != null ? _photoPreview() : _addPhotoButton(),
-
-                      // ESPACIO ARREGLADO
-                      const SizedBox(height: 24),
-
-                      _saving
-                          ? const Center(
-                          child: CircularProgressIndicator(color: AppColors.primary))
-                          : ElevatedButton(
-                        onPressed: _save,
-                        child: Text(_isEditing
-                            ? 'Guardar Cambios'
-                            : 'Guardar Registro'),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
+                        const SizedBox(height: 16),
+                        PawTextField(
+                          label: 'Notas (opcional)',
+                          hint: 'Observaciones del veterinario...',
+                          controller: _notesController,
+                        ),
+                        const SizedBox(height: 24),
+                        _sectionTitle('Foto o Documento'),
+                        const SizedBox(height: 12),
+                        _photoPath != null ? _photoPreview() : _addPhotoButton(),
+                        const SizedBox(height: 24),
+                        _saving
+                            ? const Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.primary))
+                            : ElevatedButton(
+                          onPressed: _save,
+                          child: Text(_isEditing
+                              ? 'Guardar Cambios'
+                              : 'Guardar Registro'),
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
