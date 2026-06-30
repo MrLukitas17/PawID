@@ -175,7 +175,7 @@ class _AddEventoScreenState extends State<AddEventoScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Evento guardado'),
-            backgroundColor: AppColors.primary,
+            backgroundColor: Color(0xFF00A3A3),
             duration: Duration(seconds: 1),
           ),
         );
@@ -205,8 +205,10 @@ class _AddEventoScreenState extends State<AddEventoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
           _isEditing ? 'Editar Evento' : 'Nuevo Evento',
@@ -215,159 +217,209 @@ class _AddEventoScreenState extends State<AddEventoScreen> {
         ),
         iconTheme: const IconThemeData(color: AppColors.primary),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
+      body: Stack(
+        children: [
+          // Imagen de fondo fija
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/editor_evento.png',
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              errorBuilder: (_, __, ___) =>
+                  Container(color: const Color(0xFFE0F7FA)),
+            ),
+          ),
 
-              // Tipo de evento
-              _sectionTitle('Tipo de Evento'),
-              const SizedBox(height: 12),
-              Row(
-                children: _tipos.map((t) {
-                  final selected = _tipo == t['value'];
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _tipo = t['value']!),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppColors.primary
-                              : AppColors.primary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: selected
-                                ? AppColors.primary
-                                : AppColors.primary.withOpacity(0.2),
+          // Contenido responsivo y dinámico
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - 24,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Form(
+                        key: _formKey,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.96),
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              )
+                            ],
                           ),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(t['icon']!, style: const TextStyle(fontSize: 20)),
-                            const SizedBox(height: 4),
-                            Text(
-                              t['label']!.split(' ').first,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: selected ? AppColors.white : AppColors.primary,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Tipo de evento
+                              _sectionTitle('Tipo de Evento'),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: _tipos.map((t) {
+                                  final selected = _tipo == t['value'];
+                                  return Expanded(
+                                    child: GestureDetector(
+                                      onTap: () => setState(() => _tipo = t['value']!),
+                                      child: Container(
+                                        margin: const EdgeInsets.only(right: 6),
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: selected
+                                              ? AppColors.primary
+                                              : AppColors.primary.withOpacity(0.08),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: selected
+                                                ? AppColors.primary
+                                                : AppColors.primary.withOpacity(0.2),
+                                          ),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Text(t['icon']!, style: const TextStyle(fontSize: 18)),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              t['label']!.split(' ').first,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: selected ? AppColors.white : AppColors.primary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
-                            ),
-                          ],
+
+                              const SizedBox(height: 20),
+                              _sectionTitle('Mascota'),
+                              const SizedBox(height: 4),
+
+                              // Selector de mascota
+                              _mascotas.isEmpty
+                                  ? const Text('No tienes mascotas registradas',
+                                  style: TextStyle(color: AppColors.textMedium))
+                                  : DropdownButtonFormField<String>(
+                                value: _mascotaId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Mascota *',
+                                  enabledBorder: UnderlineInputBorder(
+                                      borderSide: BorderSide(
+                                          color: AppColors.inputUnderline, width: 1.5)),
+                                  focusedBorder: UnderlineInputBorder(
+                                      borderSide:
+                                      BorderSide(color: AppColors.primary, width: 2)),
+                                  contentPadding: EdgeInsets.symmetric(vertical: 4),
+                                ),
+                                dropdownColor: AppColors.background,
+                                style: const TextStyle(
+                                    color: AppColors.textDark, fontSize: 14),
+                                items: _mascotas
+                                    .map((p) => DropdownMenuItem(
+                                  value: p.id,
+                                  child: Text(p.name),
+                                ))
+                                    .toList(),
+                                onChanged: (v) {
+                                  setState(() {
+                                    _mascotaId = v;
+                                    _mascotaNombre = _mascotas
+                                        .firstWhere((p) => p.id == v)
+                                        .name;
+                                  });
+                                },
+                              ),
+
+                              const SizedBox(height: 20),
+                              _sectionTitle('Detalles'),
+                              const SizedBox(height: 8),
+
+                              PawTextField(
+                                label: 'Título *',
+                                hint: 'Ej: Vacuna antirrábica',
+                                controller: _tituloController,
+                                validator: (v) =>
+                                v == null || v.isEmpty ? 'Campo requerido' : null,
+                              ),
+                              const SizedBox(height: 12),
+
+                              PawTextField(
+                                label: 'Descripción (opcional)',
+                                hint: 'Notas adicionales...',
+                                controller: _descripcionController,
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Fecha
+                              GestureDetector(
+                                onTap: _pickFecha,
+                                child: AbsorbPointer(
+                                  child: PawTextField(
+                                    label: 'Fecha *',
+                                    hint: 'Toca para seleccionar',
+                                    controller: _fechaController,
+                                    validator: (v) =>
+                                    v == null || v.isEmpty ? 'Campo requerido' : null,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Hora
+                              GestureDetector(
+                                onTap: _pickHora,
+                                child: AbsorbPointer(
+                                  child: PawTextField(
+                                    label: 'Hora (opcional)',
+                                    hint: 'Toca para seleccionar',
+                                    controller: _horaController,
+                                  ),
+                                ),
+                              ),
+
+                              // Fuerza al botón a quedarse abajo adaptándose al espacio de la pantalla
+                              const Spacer(),
+                              const SizedBox(height: 24),
+
+                              _isSaving
+                                  ? const Center(
+                                  child: CircularProgressIndicator(color: AppColors.primary))
+                                  : SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: _save,
+                                  style: ElevatedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                                  child: Text(
+                                    _isEditing ? 'Guardar Cambios' : 'Agregar Evento',
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(height: 24),
-              _sectionTitle('Mascota'),
-              const SizedBox(height: 12),
-
-              // Selector de mascota
-              _mascotas.isEmpty
-                  ? const Text('No tienes mascotas registradas',
-                  style: TextStyle(color: AppColors.textMedium))
-                  : DropdownButtonFormField<String>(
-                value: _mascotaId,
-                decoration: const InputDecoration(
-                  labelText: 'Mascota *',
-                  enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(
-                          color: AppColors.inputUnderline, width: 1.5)),
-                  focusedBorder: UnderlineInputBorder(
-                      borderSide:
-                      BorderSide(color: AppColors.primary, width: 2)),
-                  contentPadding: EdgeInsets.symmetric(vertical: 8),
-                ),
-                dropdownColor: AppColors.background,
-                style: const TextStyle(
-                    color: AppColors.textDark, fontSize: 14),
-                items: _mascotas
-                    .map((p) => DropdownMenuItem(
-                  value: p.id,
-                  child: Text(p.name),
-                ))
-                    .toList(),
-                onChanged: (v) {
-                  setState(() {
-                    _mascotaId = v;
-                    _mascotaNombre = _mascotas
-                        .firstWhere((p) => p.id == v)
-                        .name;
-                  });
-                },
-              ),
-
-              const SizedBox(height: 24),
-              _sectionTitle('Detalles'),
-              const SizedBox(height: 12),
-
-              PawTextField(
-                label: 'Título *',
-                hint: 'Ej: Vacuna antirrábica',
-                controller: _tituloController,
-                validator: (v) =>
-                v == null || v.isEmpty ? 'Campo requerido' : null,
-              ),
-              const SizedBox(height: 16),
-
-              PawTextField(
-                label: 'Descripción (opcional)',
-                hint: 'Notas adicionales...',
-                controller: _descripcionController,
-              ),
-              const SizedBox(height: 16),
-
-              // Fecha
-              GestureDetector(
-                onTap: _pickFecha,
-                child: AbsorbPointer(
-                  child: PawTextField(
-                    label: 'Fecha *',
-                    hint: 'Toca para seleccionar',
-                    controller: _fechaController,
-                    validator: (v) =>
-                    v == null || v.isEmpty ? 'Campo requerido' : null,
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Hora
-              GestureDetector(
-                onTap: _pickHora,
-                child: AbsorbPointer(
-                  child: PawTextField(
-                    label: 'Hora (opcional)',
-                    hint: 'Toca para seleccionar',
-                    controller: _horaController,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 36),
-
-              _isSaving
-                  ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary))
-                  : ElevatedButton(
-                onPressed: _save,
-                child: Text(
-                    _isEditing ? 'Guardar Cambios' : 'Agregar Evento'),
-              ),
-
-              const SizedBox(height: 32),
-            ],
+                );
+              },
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

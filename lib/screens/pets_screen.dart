@@ -10,12 +10,15 @@ class PetsScreen extends StatefulWidget {
   final String userId;
   final String ownerName;
   final String ownerPhone;
+  // 1. METODOLOGÍA HISTORIAL: Agregamos la función callback opcional
+  final VoidCallback? onBack;
 
   const PetsScreen({
     super.key,
     this.userId = '',
     this.ownerName = '',
     this.ownerPhone = '',
+    this.onBack, // 2. La recibimos en el constructor
   });
 
   @override
@@ -27,7 +30,6 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
   bool _loading = true;
   String? _error;
 
-  // Filtros
   String _searchQuery = '';
   String? _speciesFilter;
 
@@ -64,7 +66,6 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
     }
   }
 
-  // Mascotas filtradas por nombre y especie
   List<Pet> get _filteredPets {
     return _pets.where((p) {
       final matchesName = p.name.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -73,7 +74,6 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
     }).toList();
   }
 
-  // Solo muestra chips de especies que existen en la lista
   List<String> get _availableSpecies {
     final existing = _pets.map((p) => p.species).toSet();
     return _allSpecies.where((s) => existing.contains(s)).toList();
@@ -96,7 +96,7 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Mascota agregada correctamente'),
-            backgroundColor: AppColors.primary,
+            backgroundColor: Color(0xFF00A3A3),
             duration: Duration(seconds: 2),
           ),
         );
@@ -112,118 +112,246 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
     await _loadPets();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: const Text('Mis Mascotas',
-            style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w700, fontSize: 22)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
-            onPressed: _loadPets,
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        onPressed: _goToAddPet,
-        child: const Icon(Icons.add, color: AppColors.white),
-      ),
-      body: _loading
-          ? const Center(child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(color: AppColors.primary),
-          SizedBox(height: 16),
-          Text('Cargando mascotas...', style: TextStyle(color: AppColors.textMedium)),
-        ],
-      ))
-          : _error != null
-          ? _buildError()
-          : Column(
-        children: [
-          // Buscador
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: TextField(
-              onChanged: (v) => setState(() => _searchQuery = v),
-              decoration: InputDecoration(
-                hintText: 'Buscar mascota...',
-                prefixIcon: const Icon(Icons.search, color: AppColors.textMedium),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.textLight, size: 18),
-                  onPressed: () => setState(() => _searchQuery = ''),
-                )
-                    : null,
-                filled: true,
-                fillColor: AppColors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Filtrar por Especie',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark)),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8, runSpacing: 8,
+                  children: [
+                    _modalChip('Todas', null, setModal),
+                    ..._availableSpecies.map((s) => _modalChip(s, s, setModal)),
+                  ],
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              style: const TextStyle(color: AppColors.textDark),
+                const SizedBox(height: 8),
+              ],
             ),
           ),
-
-          // Chips de especie (solo si hay más de una especie)
-          if (_availableSpecies.length > 1)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Row(
-                children: [
-                  _speciesChip('Todos', null),
-                  ..._availableSpecies.map((s) => _speciesChip(s, s)),
-                ],
-              ),
-            ),
-
-          const SizedBox(height: 8),
-
-          // Lista o estado vacío
-          Expanded(
-            child: _pets.isEmpty
-                ? _buildEmpty()
-                : _filteredPets.isEmpty
-                ? _buildNoResults()
-                : _buildList(),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  // Chip de filtro por especie
-  Widget _speciesChip(String label, String? value) {
+  Widget _modalChip(String label, String? value, StateSetter setModal) {
     final selected = _speciesFilter == value;
-    return GestureDetector(
-      onTap: () => setState(() => _speciesFilter = value),
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.primary.withOpacity(0.2),
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      selectedColor: AppColors.primary,
+      backgroundColor: AppColors.white,
+      labelStyle: TextStyle(
+          color: selected ? Colors.white : AppColors.primary,
+          fontWeight: FontWeight.w600),
+      onSelected: (_) {
+        setState(() => _speciesFilter = value);
+        setModal(() {});
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return _loading
+        ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+        : Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // Imagen de fondo fija
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/agregar_mascota.png',
+              fit: BoxFit.cover,
+              alignment: Alignment.bottomCenter,
+              errorBuilder: (_, __, ___) =>
+                  Container(color: Colors.white),
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: selected ? AppColors.white : AppColors.primary,
+
+          // Contenido de la interfaz
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Mis Mascotas',
+                          style: TextStyle(
+                              color: AppColors.textDark,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 24)),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: AppColors.primary),
+                        onPressed: _loadPets,
+                      ),
+                    ],
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.tune, color: AppColors.primary, size: 28),
+                        onPressed: _showFilterSheet,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2))
+                            ],
+                          ),
+                          child: TextField(
+                            onChanged: (v) => setState(() => _searchQuery = v),
+                            decoration: InputDecoration(
+                              hintText: 'Buscar mascota...',
+                              prefixIcon: const Icon(Icons.search, color: AppColors.textMedium),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                icon: const Icon(Icons.close, color: AppColors.textLight, size: 18),
+                                onPressed: () => setState(() => _searchQuery = ''),
+                              )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            style: const TextStyle(color: AppColors.textDark),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: _error != null
+                      ? _buildError()
+                      : _pets.isEmpty
+                      ? Stack(
+                    children: [
+                      Positioned(
+                        top: 280,
+                        left: 0,
+                        right: 0,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Text(
+                              'No hay mascotas registradas',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: Color(0xFF1A2536),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.3),
+                            ),
+                            SizedBox(height: 10),
+                            Text(
+                              'Toca + para agregar el primer registro',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: Color(0xFF9A9FA7),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w400),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                      : _filteredPets.isEmpty
+                      ? _buildNoResults()
+                      : RefreshIndicator(
+                    color: AppColors.primary,
+                    onRefresh: _loadPets,
+                    child: ListView.builder(
+                      padding: EdgeInsets.fromLTRB(16, 8, 16, 80 + bottomPadding),
+                      itemCount: _filteredPets.length,
+                      itemBuilder: (context, index) => _buildPetCard(_filteredPets[index]),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+
+          // Botones inferiores flotantes (Atrás y Agregar)
+          Positioned(
+            bottom: 16 + bottomPadding,
+            left: 16,
+            right: 16,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  // 3. METODOLOGÍA HISTORIAL: Ejecuta el onBack igual que el historial médico
+                  onTap: () { if (widget.onBack != null) widget.onBack!(); },
+                  child: Container(
+                    width: 52, height: 52,
+                    decoration: BoxDecoration(
+                      color: AppColors.background.withOpacity(0.92),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2))
+                      ],
+                    ),
+                    child: const Icon(Icons.arrow_back, color: AppColors.primary, size: 24),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _goToAddPet,
+                  child: Container(
+                    width: 56, height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                            color: AppColors.primary.withOpacity(0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4))
+                      ],
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white, size: 30),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -246,24 +374,6 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.pets, size: 72, color: AppColors.primary.withOpacity(0.3)),
-          const SizedBox(height: 16),
-          const Text('No tienes mascotas aún',
-              style: TextStyle(fontSize: 18, color: AppColors.textMedium, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          const Text('Toca el botón + para agregar tu primera mascota',
-              style: TextStyle(fontSize: 13, color: AppColors.textLight), textAlign: TextAlign.center),
-        ],
-      ),
-    );
-  }
-
-  // Cuando hay mascotas pero no coinciden con el filtro
   Widget _buildNoResults() {
     return Center(
       child: Column(
@@ -286,18 +396,6 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
                 style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildList() {
-    return RefreshIndicator(
-      color: AppColors.primary,
-      onRefresh: _loadPets,
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-        itemCount: _filteredPets.length,
-        itemBuilder: (context, index) => _buildPetCard(_filteredPets[index]),
       ),
     );
   }

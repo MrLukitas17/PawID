@@ -52,14 +52,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           style: TextStyle(color: AppColors.textMedium, fontSize: 14),
         ),
         actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Abrir'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancelar',
                 style: TextStyle(color: AppColors.textMedium)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Abrir'),
           ),
         ],
       ),

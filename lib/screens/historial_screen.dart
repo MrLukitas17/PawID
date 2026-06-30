@@ -7,8 +7,9 @@ import 'add_historial_screen.dart';
 
 class HistorialScreen extends StatefulWidget {
   final String usuarioId;
+  final VoidCallback? onBack;
 
-  const HistorialScreen({super.key, this.usuarioId = ''});
+  const HistorialScreen({super.key, this.usuarioId = '', this.onBack});
 
   @override
   State<HistorialScreen> createState() => _HistorialScreenState();
@@ -29,18 +30,12 @@ class _HistorialScreenState extends State<HistorialScreen> {
   Future<void> _loadHistorial() async {
     setState(() => _loading = true);
     final registros = await ServicioHistorial.cargarHistorialNube(widget.usuarioId);
-    if (mounted) {
-      setState(() {
-        _registros = registros;
-        _loading = false;
-      });
-    }
+    if (mounted) setState(() { _registros = registros; _loading = false; });
   }
 
   List<RegistroMedico> get _filteredRecords {
     return _registros.where((r) {
-      final matchesName =
-      r.nombre.toLowerCase().contains(_searchFilter.toLowerCase());
+      final matchesName = r.nombre.toLowerCase().contains(_searchFilter.toLowerCase());
       final matchesPet = _petFilter == null || r.mascotaNombre == _petFilter;
       return matchesName && matchesPet;
     }).toList();
@@ -52,15 +47,19 @@ class _HistorialScreenState extends State<HistorialScreen> {
     return names;
   }
 
-  // Navegar a editar registro
+  Future<void> _goToAdd() async {
+    final added = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => AddHistorialScreen(userId: widget.usuarioId)),
+    );
+    if (added == true) await _loadHistorial();
+  }
+
   Future<void> _editRecord(RegistroMedico registro) async {
     final updated = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => AddHistorialScreen(
-          userId: widget.usuarioId,
-          registro: registro,
-        ),
+        builder: (_) => AddHistorialScreen(userId: widget.usuarioId, registro: registro),
       ),
     );
     if (updated == true) await _loadHistorial();
@@ -79,8 +78,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppColors.textMedium)),
+            child: const Text('Cancelar', style: TextStyle(color: AppColors.textMedium)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -104,13 +102,9 @@ class _HistorialScreenState extends State<HistorialScreen> {
         child: Stack(
           children: [
             InteractiveViewer(
-              child: Image.file(
-                File(path),
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Center(
-                  child: Icon(Icons.broken_image, color: Colors.white, size: 64),
-                ),
-              ),
+              child: Image.file(File(path), fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Center(
+                      child: Icon(Icons.broken_image, color: Colors.white, size: 64))),
             ),
             Positioned(
               top: 8, right: 8,
@@ -118,10 +112,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 onTap: () => Navigator.pop(ctx),
                 child: Container(
                   padding: const EdgeInsets.all(6),
-                  decoration: const BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
                   child: const Icon(Icons.close, color: Colors.white, size: 20),
                 ),
               ),
@@ -132,135 +123,230 @@ class _HistorialScreenState extends State<HistorialScreen> {
     );
   }
 
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Filtrar por Mascota',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark)),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8, runSpacing: 8,
+                  children: [
+                    _modalChip('Todas', null, setModal),
+                    ..._petNames.map((n) => _modalChip(n, n, setModal)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _modalChip(String label, String? value, StateSetter setModal) {
+    final selected = _petFilter == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      selectedColor: AppColors.primary,
+      backgroundColor: AppColors.white,
+      labelStyle: TextStyle(
+          color: selected ? Colors.white : AppColors.primary,
+          fontWeight: FontWeight.w600),
+      onSelected: (_) {
+        setState(() => _petFilter = value);
+        setModal(() {});
+        Navigator.pop(context);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: const Text('Historial Médico',
-            style: TextStyle(
-                color: AppColors.textDark,
-                fontWeight: FontWeight.w700,
-                fontSize: 22)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
-            onPressed: _loadHistorial,
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        onPressed: () async {
-          final added = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AddHistorialScreen(userId: widget.usuarioId),
-            ),
-          );
-          if (added == true) await _loadHistorial();
-        },
-        child: const Icon(Icons.add, color: AppColors.white),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : Column(
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return _loading
+        ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+        : Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
         children: [
-          // Buscador
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: TextField(
-              onChanged: (v) => setState(() => _searchFilter = v),
-              decoration: InputDecoration(
-                hintText: 'Buscar registro...',
-                prefixIcon: const Icon(Icons.search, color: AppColors.textMedium),
-                filled: true,
-                fillColor: AppColors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+          // Imagen de fondo (Pata de menu_historial.png)
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/menu_historial.png',
+              fit: BoxFit.cover,
+              alignment: Alignment.bottomCenter,
+              errorBuilder: (_, __, ___) =>
+                  Container(color: Colors.white),
+            ),
+          ),
+
+          // Contenido principal
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Título y refresh
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Historial Médico',
+                          style: TextStyle(
+                              color: AppColors.textDark,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 24)),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: AppColors.primary),
+                        onPressed: _loadHistorial,
+                      ),
+                    ],
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              style: const TextStyle(color: AppColors.textDark),
+
+                // Buscador y filtro
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.tune, color: AppColors.primary, size: 28),
+                        onPressed: _showFilterSheet,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2))
+                            ],
+                          ),
+                          child: TextField(
+                            onChanged: (v) => setState(() => _searchFilter = v),
+                            decoration: const InputDecoration(
+                              hintText: 'Buscar registro...',
+                              prefixIcon: Icon(Icons.search, color: AppColors.textMedium),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            style: const TextStyle(color: AppColors.textDark),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Sección de datos dinámica
+                Expanded(
+                  child: _filteredRecords.isEmpty
+                      ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Espacio empujado hacia abajo de la pata
+                        const SizedBox(height: 140),
+                        const Text(
+                          'No hay registros médicos',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: Color(0xFF1A2536),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.3),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Toca + para agregar el primer registro',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: Color(0xFF9A9FA7),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w400),
+                        ),
+                        // Balance de los botones inferiores
+                        SizedBox(height: 60 + bottomPadding),
+                      ],
+                    ),
+                  )
+                      : ListView.builder(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 80 + bottomPadding),
+                    itemCount: _filteredRecords.length,
+                    itemBuilder: (_, i) => _recordCard(_filteredRecords[i]),
+                  ),
+                ),
+              ],
             ),
           ),
 
-          // Filtro por mascota (aparece siempre que haya mascotas)
-          if (_petNames.isNotEmpty)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Row(
-                children: [
-                  _filterChip('Todas', null),
-                  ..._petNames.map((n) => _filterChip(n, n)).toList(),
-                ],
-              ),
+          // Botones flotantes (atrás y agregar)
+          Positioned(
+            bottom: 16 + bottomPadding,
+            left: 16,
+            right: 16,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: () { if (widget.onBack != null) widget.onBack!(); },
+                  child: Container(
+                    width: 52, height: 52,
+                    decoration: BoxDecoration(
+                      color: AppColors.background.withOpacity(0.92),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2))
+                      ],
+                    ),
+                    child: const Icon(Icons.arrow_back, color: AppColors.primary, size: 24),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _goToAdd,
+                  child: Container(
+                    width: 56, height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                            color: AppColors.primary.withOpacity(0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4))
+                      ],
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white, size: 30),
+                  ),
+                ),
+              ],
             ),
-
-          const SizedBox(height: 8),
-
-          // Lista
-          Expanded(
-            child: _filteredRecords.isEmpty
-                ? _buildEmpty()
-                : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-              itemCount: _filteredRecords.length,
-              itemBuilder: (_, i) => _recordCard(_filteredRecords[i]),
-            ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _filterChip(String label, String? value) {
-    final selected = _petFilter == value;
-    return GestureDetector(
-      onTap: () => setState(() => _petFilter = value),
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.primary.withOpacity(0.2),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: selected ? AppColors.white : AppColors.primary,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.medical_services_outlined,
-              size: 64, color: AppColors.primary.withOpacity(0.3)),
-          const SizedBox(height: 16),
-          const Text('No hay registros médicos',
-              style: TextStyle(
-                  fontSize: 17,
-                  color: AppColors.textMedium,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          const Text('Toca + para agregar el primer registro',
-              style: TextStyle(fontSize: 13, color: AppColors.textLight)),
         ],
       ),
     );
@@ -274,16 +360,14 @@ class _HistorialScreenState extends State<HistorialScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.07),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
+              color: AppColors.primary.withOpacity(0.07),
+              blurRadius: 8,
+              offset: const Offset(0, 3)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Foto si existe
           if (registro.fotoUrl.isNotEmpty)
             GestureDetector(
               onTap: () => _viewPhoto(registro.fotoUrl),
@@ -291,30 +375,24 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 width: double.infinity,
                 height: 160,
                 decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-                ),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(14))),
                 clipBehavior: Clip.antiAlias,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.file(
-                      File(registro.fotoUrl),
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: AppColors.background,
-                        child: const Icon(Icons.image_not_supported,
-                            size: 48, color: AppColors.textLight),
-                      ),
-                    ),
+                    Image.file(File(registro.fotoUrl),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                            color: AppColors.background,
+                            child: const Icon(Icons.image_not_supported,
+                                size: 48, color: AppColors.textLight))),
                     Positioned(
                       bottom: 8, right: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(8)),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -330,7 +408,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 ),
               ),
             ),
-
           Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -345,7 +422,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
                               fontWeight: FontWeight.w700,
                               color: AppColors.textDark)),
                     ),
-                    // Botón editar
                     GestureDetector(
                       onTap: () => _editRecord(registro),
                       child: const Padding(
@@ -355,7 +431,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    // Botón eliminar
                     GestureDetector(
                       onTap: () => _deleteRecord(registro),
                       child: const Padding(
@@ -391,9 +466,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                   const SizedBox(height: 8),
                   Text(registro.notas,
                       style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textMedium,
-                          height: 1.4)),
+                          fontSize: 12, color: AppColors.textMedium, height: 1.4)),
                 ],
               ],
             ),

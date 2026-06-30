@@ -10,7 +10,6 @@ import '../widgets/paw_text_field.dart';
 
 class AddHistorialScreen extends StatefulWidget {
   final String userId;
-  // Si se pasa un registro, entra en modo edición
   final RegistroMedico? registro;
 
   const AddHistorialScreen({
@@ -41,7 +40,6 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
   void initState() {
     super.initState();
     _loadPets();
-    // Si es edición, pre-rellena los campos
     if (_isEditing) {
       final r = widget.registro!;
       _nameController.text = r.nombre;
@@ -65,7 +63,6 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
     final pets = await PetStorageService.loadPets(userId: widget.userId);
     setState(() {
       _pets = pets;
-      // Solo asigna primera mascota si es modo nuevo y no hay petId
       if (pets.isNotEmpty && _petId == null) {
         _petId = pets.first.id;
         _petName = pets.first.name;
@@ -184,7 +181,6 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
 
     try {
       final registro = RegistroMedico(
-        // En edición conserva el id original
         id: _isEditing
             ? widget.registro!.id
             : DateTime.now().millisecondsSinceEpoch.toString(),
@@ -209,7 +205,7 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
             content: Text(_isEditing
                 ? '✅ Registro actualizado'
                 : '✅ Registro guardado'),
-            backgroundColor: AppColors.primary,
+            backgroundColor: Color(0xFF00A3A3),
             duration: const Duration(seconds: 1),
           ),
         );
@@ -233,8 +229,9 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
           _isEditing ? 'Editar Registro' : 'Nuevo Registro Médico',
@@ -243,118 +240,123 @@ class _AddHistorialScreenState extends State<AddHistorialScreen> {
         ),
         iconTheme: const IconThemeData(color: AppColors.primary),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-
-              // Selector de mascota
-              _sectionTitle('Mascota'),
-              const SizedBox(height: 12),
-              _pets.isEmpty
-                  ? const Text('No tienes mascotas registradas',
-                  style: TextStyle(color: AppColors.textMedium))
-                  : DropdownButtonFormField<String>(
-                value: _petId,
-                decoration: const InputDecoration(
-                  labelText: 'Selecciona la mascota *',
-                  enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(
-                          color: AppColors.inputUnderline, width: 1.5)),
-                  focusedBorder: UnderlineInputBorder(
-                      borderSide:
-                      BorderSide(color: AppColors.primary, width: 2)),
-                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+      body: Stack(
+        children: [
+          // Fondo
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/historial_medico.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Contenido
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.96), // Fondo gris/blanco semitransparente
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                dropdownColor: AppColors.background,
-                style: const TextStyle(
-                    color: AppColors.textDark, fontSize: 14),
-                items: _pets
-                    .map((p) => DropdownMenuItem(
-                  value: p.id,
-                  child: Row(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.pets,
-                          size: 16, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Text(p.name),
+                      const SizedBox(height: 8),
+                      _sectionTitle('Mascota'),
+                      const SizedBox(height: 12),
+                      _pets.isEmpty
+                          ? const Text('No tienes mascotas registradas',
+                          style: TextStyle(color: AppColors.textMedium))
+                          : DropdownButtonFormField<String>(
+                        value: _petId,
+                        decoration: const InputDecoration(
+                          labelText: 'Selecciona la mascota *',
+                          enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: AppColors.inputUnderline, width: 1.5)),
+                          focusedBorder: UnderlineInputBorder(
+                              borderSide:
+                              BorderSide(color: AppColors.primary, width: 2)),
+                          contentPadding: EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        dropdownColor: AppColors.background,
+                        style: const TextStyle(
+                            color: AppColors.textDark, fontSize: 14),
+                        items: _pets
+                            .map((p) => DropdownMenuItem(
+                          value: p.id,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.pets,
+                                  size: 16, color: AppColors.primary),
+                              const SizedBox(width: 8),
+                              Text(p.name),
+                            ],
+                          ),
+                        ))
+                            .toList(),
+                        onChanged: (v) {
+                          setState(() {
+                            _petId = v;
+                            _petName = _pets.firstWhere((p) => p.id == v).name;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      _sectionTitle('Detalles del Registro'),
+                      const SizedBox(height: 12),
+                      PawTextField(
+                        label: 'Nombre del registro *',
+                        hint: 'Ej: Control anual, Vacuna antirrábica...',
+                        controller: _nameController,
+                        validator: (v) =>
+                        v == null || v.isEmpty ? 'Campo requerido' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      GestureDetector(
+                        onTap: _selectDate,
+                        child: AbsorbPointer(
+                          child: PawTextField(
+                            label: 'Fecha (opcional)',
+                            hint: 'Toca para seleccionar',
+                            controller: _dateController,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      PawTextField(
+                        label: 'Notas (opcional)',
+                        hint: 'Observaciones del veterinario...',
+                        controller: _notesController,
+                      ),
+                      const SizedBox(height: 24),
+                      _sectionTitle('Foto o Documento'),
+                      const SizedBox(height: 12),
+                      _photoPath != null ? _photoPreview() : _addPhotoButton(),
+
+                      // ESPACIO ARREGLADO
+                      const SizedBox(height: 24),
+
+                      _saving
+                          ? const Center(
+                          child: CircularProgressIndicator(color: AppColors.primary))
+                          : ElevatedButton(
+                        onPressed: _save,
+                        child: Text(_isEditing
+                            ? 'Guardar Cambios'
+                            : 'Guardar Registro'),
+                      ),
+                      const SizedBox(height: 32),
                     ],
                   ),
-                ))
-                    .toList(),
-                onChanged: (v) {
-                  setState(() {
-                    _petId = v;
-                    _petName = _pets.firstWhere((p) => p.id == v).name;
-                  });
-                },
-              ),
-
-              const SizedBox(height: 24),
-
-              // Detalles del registro
-              _sectionTitle('Detalles del Registro'),
-              const SizedBox(height: 12),
-
-              // Nombre del registro
-              PawTextField(
-                label: 'Nombre del registro *',
-                hint: 'Ej: Control anual, Vacuna antirrábica...',
-                controller: _nameController,
-                validator: (v) =>
-                v == null || v.isEmpty ? 'Campo requerido' : null,
-              ),
-              const SizedBox(height: 16),
-
-              // Fecha (opcional)
-              GestureDetector(
-                onTap: _selectDate,
-                child: AbsorbPointer(
-                  child: PawTextField(
-                    label: 'Fecha (opcional)',
-                    hint: 'Toca para seleccionar',
-                    controller: _dateController,
-                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // Notas (opcional)
-              PawTextField(
-                label: 'Notas (opcional)',
-                hint: 'Observaciones del veterinario...',
-                controller: _notesController,
-              ),
-
-              const SizedBox(height: 24),
-
-              // Foto o documento
-              _sectionTitle('Foto o Documento'),
-              const SizedBox(height: 12),
-
-              _photoPath != null ? _photoPreview() : _addPhotoButton(),
-
-              const SizedBox(height: 36),
-
-              // Botón guardar
-              _saving
-                  ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary))
-                  : ElevatedButton(
-                onPressed: _save,
-                child: Text(_isEditing
-                    ? 'Guardar Cambios'
-                    : 'Guardar Registro'),
-              ),
-
-              const SizedBox(height: 32),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color background = Color(0xFFF5E6D3);
-  static const Color primary = Color(0xFF6B3A2A);
-  static const Color primaryLight = Color(0xFF8B5A3A);
-  static const Color accent = Color(0xFFD4875A);
-  static const Color textDark = Color(0xFF3D2010);
-  static const Color textMedium = Color(0xFF7A5C4A);
-  static const Color textLight = Color(0xFFAA8A78);
-  static const Color inputUnderline = Color(0xFF8B6355);
-  static const Color white = Color(0xFFFFFFFF);
-  static const Color linkColor = Color(0xFFB85C38);
+  static const Color background = Color(0xFFF5F5F0);
+  static const Color primary = Color(0xFF007777);
+  static const Color primaryLight = Color(0xFF00A3A3);
+  static const Color accent = Color(0xFFFF8C69);
+  static const Color textDark = Color(0xFF333333);
+  static const Color textMedium = Color(0xFF1A1A3A);
+  static const Color textLight = Color(0xFF7A9A9A);
+  static const Color inputUnderline = Color(0xFF00A3A3);
+  static const Color white = Color(0xFFFEFEFE);
+  static const Color linkColor = Color(0xFF007777);
+  static const Color mint = Color(0xFFE0F7FA);
 }
 
 class AppTheme {

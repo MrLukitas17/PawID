@@ -10,7 +10,6 @@ import '../widgets/paw_text_field.dart';
 class AddPetScreen extends StatefulWidget {
   final Pet? pet;
   final String userId;
-  // Datos del dueño desde el perfil (pre-relleno bloqueado)
   final String defaultOwnerName;
   final String defaultOwnerPhone;
 
@@ -48,7 +47,6 @@ class _AddPetScreenState extends State<AddPetScreen> {
   void initState() {
     super.initState();
     if (_isEditing) {
-      // Modo edición: carga datos de la mascota existente
       final p = widget.pet!;
       _nameController.text = p.name;
       _breedController.text = p.breed;
@@ -58,7 +56,6 @@ class _AddPetScreenState extends State<AddPetScreen> {
       _selectedSpecies = p.species;
       _photoPath = p.photoPath;
     } else {
-      // Modo nuevo: pre-rellena con datos del perfil
       _ownerNameController.text = widget.defaultOwnerName;
       _ownerPhoneController.text = widget.defaultOwnerPhone;
     }
@@ -159,7 +156,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
               SizedBox(width: 10),
               Text('Mascota guardada exitosamente'),
             ]),
-            backgroundColor: AppColors.primary,
+            backgroundColor: Color(0xFF00A3A3), // <--- CAMBIO: Color verde claro
             duration: Duration(seconds: 1),
           ),
         );
@@ -180,166 +177,240 @@ class _AddPetScreenState extends State<AddPetScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
           _isEditing ? 'Editar Mascota' : 'Nueva Mascota',
           style: const TextStyle(
-              color: AppColors.textDark, fontWeight: FontWeight.w700, fontSize: 20),
+              color: Color(0xFF007777),
+              fontWeight: FontWeight.w700,
+              fontSize: 20),
         ),
-        iconTheme: const IconThemeData(color: AppColors.primary),
+        iconTheme: const IconThemeData(color: Color(0xFF007777)),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: _buildPhotoSelector()),
-              const SizedBox(height: 8),
-              const Center(
-                child: Text('Foto opcional — toca para agregar',
-                    style: TextStyle(fontSize: 12, color: AppColors.textLight)),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/agregar_mascota.png',
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              errorBuilder: (_, __, ___) => Container(
+                color: const Color(0xFFE0F7FA),
               ),
-              const SizedBox(height: 24),
-
-              // ── Datos de la Mascota ─────────────────────────────────
-              _sectionTitle('Datos de la Mascota'),
-              const SizedBox(height: 12),
-
-              // Nombre: solo letras, máximo 50 caracteres
-              TextFormField(
-                controller: _nameController,
-                style: const TextStyle(color: AppColors.textDark, fontSize: 14),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(
-                      RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
-                  LengthLimitingTextInputFormatter(50),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Nombre *',
-                  hintText: 'Solo letras, máx. 50 caracteres',
-                  enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.inputUnderline, width: 1.5)),
-                  focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.primary, width: 2)),
-                  contentPadding: EdgeInsets.symmetric(vertical: 8),
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Campo requerido';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildSpeciesDropdown(),
-              const SizedBox(height: 16),
-
-              // Raza: solo letras, máximo 15 caracteres
-              TextFormField(
-                controller: _breedController,
-                style: const TextStyle(color: AppColors.textDark, fontSize: 14),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(
-                      RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
-                  LengthLimitingTextInputFormatter(50),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Raza *',
-                  hintText: 'Solo letras, máx. 50 caracteres',
-                  enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.inputUnderline, width: 1.5)),
-                  focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.primary, width: 2)),
-                  contentPadding: EdgeInsets.symmetric(vertical: 8),
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Campo requerido';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Fecha de nacimiento: opcional
-              GestureDetector(
-                onTap: _pickDate,
-                child: AbsorbPointer(
-                  child: PawTextField(
-                    label: 'Fecha de Nacimiento (opcional)',
-                    hint: 'Toca para seleccionar',
-                    controller: _birthDateController,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              // ── Datos del Dueño ─────────────────────────────────────
-              _sectionTitle('Datos del Dueño'),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.lock_outline,
-                      size: 13, color: AppColors.primary.withOpacity(0.6)),
-                  const SizedBox(width: 5),
-                  const Text('Editables desde Configuración',
-                      style: TextStyle(fontSize: 12, color: AppColors.textLight)),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Nombre del dueño: solo lectura
-              _readOnlyField(
-                label: 'Nombre del dueño',
-                value: _ownerNameController.text,
-                icon: Icons.person_outline,
-              ),
-              const SizedBox(height: 16),
-
-              // Teléfono: solo lectura con prefijo +56
-              _readOnlyPhoneField(value: _ownerPhoneController.text),
-
-              const SizedBox(height: 36),
-
-              _isSaving
-                  ? const Center(child: Column(children: [
-                CircularProgressIndicator(color: AppColors.primary),
-                SizedBox(height: 8),
-                Text('Guardando...', style: TextStyle(color: AppColors.textMedium)),
-              ]))
-                  : ElevatedButton(
-                onPressed: _save,
-                child: Text(_isEditing ? 'Guardar Cambios' : 'Agregar Mascota'),
-              ),
-              const SizedBox(height: 32),
-            ],
+            ),
           ),
-        ),
+
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + bottomPadding),
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.96), // <--- CAMBIO: Opacidad a 0.96
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(child: _buildPhotoSelector()),
+                          const SizedBox(height: 6),
+                          const Center(
+                            child: Text('Toca para agregar foto',
+                                style: TextStyle(
+                                    fontSize: 12, color: AppColors.textLight)),
+                          ),
+                          const SizedBox(height: 20),
+
+                          _sectionTitle('Datos de la Mascota'),
+                          const SizedBox(height: 12),
+
+                          TextFormField(
+                            controller: _nameController,
+                            style: const TextStyle(
+                                color: AppColors.textDark, fontSize: 14),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
+                              LengthLimitingTextInputFormatter(50),
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Nombre *',
+                              hintText: 'Solo letras, máx. 50 caracteres',
+                              labelStyle: TextStyle(color: Color(0xFF007777)),
+                              enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(
+                                      color: Color(0xFF00A3A3), width: 1.5)),
+                              focusedBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(
+                                      color: Color(0xFF007777), width: 2)),
+                              contentPadding:
+                              EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty)
+                                return 'Campo requerido';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          _buildSpeciesDropdown(),
+                          const SizedBox(height: 16),
+
+                          TextFormField(
+                            controller: _breedController,
+                            style: const TextStyle(
+                                color: AppColors.textDark, fontSize: 14),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
+                              LengthLimitingTextInputFormatter(50),
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Raza *',
+                              labelStyle: TextStyle(color: Color(0xFF007777)),
+                              enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(
+                                      color: Color(0xFF00A3A3), width: 1.5)),
+                              focusedBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(
+                                      color: Color(0xFF007777), width: 2)),
+                              contentPadding:
+                              EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty)
+                                return 'Campo requerido';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          GestureDetector(
+                            onTap: _pickDate,
+                            child: AbsorbPointer(
+                              child: PawTextField(
+                                label: 'Fecha de Nacimiento (opcional)',
+                                hint: 'Toca para seleccionar',
+                                controller: _birthDateController,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          _sectionTitle('Datos del Dueño'),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(Icons.lock_outline,
+                                  size: 13,
+                                  color: const Color(0xFF007777).withOpacity(0.6)),
+                              const SizedBox(width: 5),
+                              const Text('Editables desde Configuración',
+                                  style: TextStyle(
+                                      fontSize: 12, color: AppColors.textLight)),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          _readOnlyField(
+                            label: 'Nombre del dueño',
+                            value: _ownerNameController.text,
+                            icon: Icons.person_outline,
+                          ),
+                          const SizedBox(height: 16),
+
+                          _readOnlyPhoneField(
+                              value: _ownerPhoneController.text),
+
+                          const SizedBox(height: 28),
+
+                          _isSaving
+                              ? const Center(
+                            child: Column(children: [
+                              CircularProgressIndicator(
+                                  color: Color(0xFF007777)),
+                              SizedBox(height: 8),
+                              Text('Guardando...',
+                                  style: TextStyle(
+                                      color: AppColors.textMedium)),
+                            ]),
+                          )
+                              : SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton(
+                              onPressed: _save,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF007777),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                    BorderRadius.circular(26)),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                _isEditing
+                                    ? 'GUARDAR CAMBIOS'
+                                    : 'AGREGAR MASCOTA',
+                                style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.2),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // Campo solo lectura con fondo sutil
   Widget _readOnlyField({required String label, required String value, required IconData icon}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
+        color: const Color(0xFF007777).withOpacity(0.05),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputUnderline.withOpacity(0.5)),
+        border: Border.all(
+            color: const Color(0xFF007777).withOpacity(0.2)),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: AppColors.primary.withOpacity(0.7)),
+          Icon(icon, size: 18, color: const Color(0xFF007777).withOpacity(0.7)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textLight)),
                 const SizedBox(height: 2),
                 Text(
                   value.isNotEmpty ? value : '—',
@@ -357,20 +428,20 @@ class _AddPetScreenState extends State<AddPetScreen> {
     );
   }
 
-  // Campo teléfono solo lectura con prefijo +56
   Widget _readOnlyPhoneField({required String value}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
+        color: const Color(0xFF007777).withOpacity(0.05),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputUnderline.withOpacity(0.5)),
+        border: Border.all(
+            color: const Color(0xFF007777).withOpacity(0.2)),
       ),
       child: Row(
         children: [
           const Text('+56',
               style: TextStyle(
-                  color: AppColors.primary,
+                  color: Color(0xFF007777),
                   fontWeight: FontWeight.w600,
                   fontSize: 14)),
           const SizedBox(width: 8),
@@ -407,24 +478,24 @@ class _AddPetScreenState extends State<AddPetScreen> {
           Container(
             width: 100, height: 100,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: const Color(0xFF007777).withOpacity(0.1),
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.primary, width: 2),
+              border: Border.all(color: const Color(0xFF007777), width: 2),
             ),
             clipBehavior: Clip.antiAlias,
             child: _photoPath != null
                 ? Image.file(File(_photoPath!), fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                const Icon(Icons.pets, size: 44, color: AppColors.primary))
-                : const Icon(Icons.pets, size: 44, color: AppColors.primary),
+                errorBuilder: (_, __, ___) => const Icon(Icons.pets,
+                    size: 44, color: Color(0xFF007777)))
+                : const Icon(Icons.pets, size: 44, color: Color(0xFF007777)),
           ),
           Positioned(
             bottom: 0, right: 0,
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(
-                  color: AppColors.primary, shape: BoxShape.circle),
-              child: const Icon(Icons.camera_alt, size: 16, color: AppColors.white),
+                  color: Color(0xFF007777), shape: BoxShape.circle),
+              child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
             ),
           ),
         ],
@@ -437,15 +508,18 @@ class _AddPetScreenState extends State<AddPetScreen> {
       value: _selectedSpecies,
       decoration: const InputDecoration(
         labelText: 'Especie *',
+        labelStyle: TextStyle(color: Color(0xFF007777)),
         enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.inputUnderline, width: 1.5)),
+            borderSide: BorderSide(color: Color(0xFF00A3A3), width: 1.5)),
         focusedBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.primary, width: 2)),
+            borderSide: BorderSide(color: Color(0xFF007777), width: 2)),
         contentPadding: EdgeInsets.symmetric(vertical: 8),
       ),
-      dropdownColor: AppColors.background,
+      dropdownColor: const Color(0xFFF5F5F0),
       style: const TextStyle(color: AppColors.textDark, fontSize: 14),
-      items: _species.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+      items: _species
+          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+          .toList(),
       onChanged: (v) => setState(() => _selectedSpecies = v!),
     );
   }
@@ -453,6 +527,8 @@ class _AddPetScreenState extends State<AddPetScreen> {
   Widget _sectionTitle(String title) {
     return Text(title,
         style: const TextStyle(
-            fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.primary));
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF007777)));
   }
 }
