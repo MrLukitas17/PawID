@@ -128,10 +128,30 @@ class _AddPetScreenState extends State<AddPetScreen> {
     setState(() => _isSaving = true);
 
     try {
+      final petId = _isEditing
+          ? widget.pet!.id
+          : DateTime.now().millisecondsSinceEpoch.toString();
+
+      // ── Subida de foto a Supabase Storage ────────────────────────────
+      // Si el usuario eligió una foto nueva (ruta local en el dispositivo),
+      // la subimos al bucket y nos quedamos con la URL pública resultante.
+      // Si _photoPath ya era una URL (no se tocó la foto al editar) o no hay
+      // foto, uploadPetPhoto la deja pasar o devuelve null sin romper nada.
+      String? finalPhotoUrl = _photoPath;
+      if (_photoPath != null) {
+        final uploadedUrl =
+        await PetStorageService.uploadPetPhoto(_photoPath!, petId);
+        if (uploadedUrl != null) {
+          finalPhotoUrl = uploadedUrl;
+        }
+        // Si la subida falla (ej. sin internet), finalPhotoUrl se queda con
+        // la ruta local: el PDF nativo de Flutter seguirá funcionando en este
+        // dispositivo, aunque la ficha web de GitHub no podrá mostrar la foto
+        // hasta que haya conexión y se vuelva a guardar.
+      }
+
       final pet = Pet(
-        id: _isEditing
-            ? widget.pet!.id
-            : DateTime.now().millisecondsSinceEpoch.toString(),
+        id: petId,
         name: _nameController.text.trim(),
         species: _selectedSpecies,
         breed: _breedController.text.trim(),
@@ -139,7 +159,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
         ownerName: _ownerNameController.text.trim(),
         ownerPhone: _ownerPhoneController.text.trim(),
         ownerEmail: '',
-        photoPath: _photoPath,
+        photoPath: finalPhotoUrl,
       );
 
       if (_isEditing) {
@@ -156,7 +176,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
               SizedBox(width: 10),
               Text('Mascota guardada exitosamente'),
             ]),
-            backgroundColor: Color(0xFF00A3A3), // <--- CAMBIO: Color verde claro
+            backgroundColor: Color(0xFF00A3A3),
             duration: Duration(seconds: 1),
           ),
         );
@@ -213,7 +233,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.96), // <--- CAMBIO: Opacidad a 0.96
+                      color: Colors.white.withOpacity(0.96),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -483,11 +503,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
               border: Border.all(color: const Color(0xFF007777), width: 2),
             ),
             clipBehavior: Clip.antiAlias,
-            child: _photoPath != null
-                ? Image.file(File(_photoPath!), fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.pets,
-                    size: 44, color: Color(0xFF007777)))
-                : const Icon(Icons.pets, size: 44, color: Color(0xFF007777)),
+            child: _buildPhotoPreview(),
           ),
           Positioned(
             bottom: 0, right: 0,
@@ -500,6 +516,29 @@ class _AddPetScreenState extends State<AddPetScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // Muestra la foto seleccionada tanto si es una ruta local (foto recién
+  // elegida, aún no subida) como si ya es una URL de Supabase (mascota
+  // existente que se está editando).
+  Widget _buildPhotoPreview() {
+    if (_photoPath == null) {
+      return const Icon(Icons.pets, size: 44, color: Color(0xFF007777));
+    }
+    if (_photoPath!.startsWith('http://') || _photoPath!.startsWith('https://')) {
+      return Image.network(
+        _photoPath!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+        const Icon(Icons.pets, size: 44, color: Color(0xFF007777)),
+      );
+    }
+    return Image.file(
+      File(_photoPath!),
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) =>
+      const Icon(Icons.pets, size: 44, color: Color(0xFF007777)),
     );
   }
 

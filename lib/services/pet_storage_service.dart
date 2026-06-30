@@ -1,12 +1,54 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/pet.dart';
 import 'supabase_config.dart';
 
 class PetStorageService {
   static final _client = SupabaseConfig.client;
   static const String _localFileName = 'pawid_pets_local.json';
+
+  // Nombre del bucket creado en Supabase Storage (debe ser público)
+  static const String _storageBucket = 'mascotas-fotos';
+
+  // ─── STORAGE (fotos) ──────────────────────────────────────────────────────
+
+  /// Sube una foto local al bucket de Supabase Storage y devuelve su URL pública.
+  /// Si [localPath] ya es una URL (http/https), la devuelve sin volver a subir.
+  static Future<String?> uploadPetPhoto(String localPath, String petId) async {
+    try {
+      // Si ya es una URL pública (ej. al editar una mascota que ya tenía foto
+      // subida y el usuario no cambió la imagen), no hay que volver a subirla.
+      if (localPath.startsWith('http://') || localPath.startsWith('https://')) {
+        return localPath;
+      }
+
+      final file = File(localPath);
+      if (!await file.exists()) return null;
+
+      final bytes = await file.readAsBytes();
+      final ext = localPath.split('.').last;
+      // Nombre único por mascota para poder sobreescribir si se cambia la foto
+      final storagePath = '$petId.$ext';
+
+      await _client.storage.from(_storageBucket).uploadBinary(
+        storagePath,
+        bytes,
+        fileOptions: const FileOptions(upsert: true),
+      );
+
+      final publicUrl =
+      _client.storage.from(_storageBucket).getPublicUrl(storagePath);
+      return publicUrl;
+    } catch (e) {
+      // ignore: avoid_print
+      print('❌ Error al subir foto a Supabase Storage: $e');
+      // Si falla la subida (sin internet, etc.), devolvemos null y el caller
+      // decide si guarda la ruta local como fallback solo para el PDF nativo.
+      return null;
+    }
+  }
 
   // ─── SUPABASE ─────────────────────────────────────────────────────────────
 

@@ -258,11 +258,7 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
             color: AppColors.primary.withOpacity(0.1),
           ),
           clipBehavior: Clip.antiAlias,
-          child: _pet.photoPath != null
-              ? Image.file(File(_pet.photoPath!), fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-              const Icon(Icons.pets, size: 44, color: AppColors.primary))
-              : const Icon(Icons.pets, size: 44, color: AppColors.primary),
+          child: _buildPhotoPreview(),
         ),
         const SizedBox(height: 12),
         Text(_pet.name,
@@ -271,6 +267,30 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
         Text('${_pet.species} · ${_pet.breed}',
             style: const TextStyle(fontSize: 14, color: AppColors.textMedium)),
       ],
+    );
+  }
+
+  // Muestra la foto de la mascota tanto si es una URL de Supabase Storage
+  // (caso normal tras el fix de subida) como si fuera una ruta local antigua
+  // que quedó guardada de antes (compatibilidad con datos viejos).
+  Widget _buildPhotoPreview() {
+    final path = _pet.photoPath;
+    if (path == null || path.isEmpty) {
+      return const Icon(Icons.pets, size: 44, color: AppColors.primary);
+    }
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return Image.network(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+        const Icon(Icons.pets, size: 44, color: AppColors.primary),
+      );
+    }
+    return Image.file(
+      File(path),
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) =>
+      const Icon(Icons.pets, size: 44, color: AppColors.primary),
     );
   }
 

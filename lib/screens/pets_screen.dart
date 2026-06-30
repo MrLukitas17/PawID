@@ -423,10 +423,7 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
                 color: AppColors.primary.withOpacity(0.08),
               ),
               clipBehavior: Clip.antiAlias,
-              child: pet.photoPath != null
-                  ? Image.file(File(pet.photoPath!), fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.pets, size: 28, color: AppColors.primary))
-                  : const Icon(Icons.pets, size: 28, color: AppColors.primary),
+              child: _buildPhotoPreview(pet),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -447,6 +444,29 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
           ],
         ),
       ),
+    );
+  }
+
+  // Muestra la foto de la mascota tanto si es una URL de Supabase Storage
+  // como si fuera una ruta local antigua (compatibilidad con datos viejos).
+  Widget _buildPhotoPreview(Pet pet) {
+    final path = pet.photoPath;
+    if (path == null || path.isEmpty) {
+      return const Icon(Icons.pets, size: 28, color: AppColors.primary);
+    }
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return Image.network(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+        const Icon(Icons.pets, size: 28, color: AppColors.primary),
+      );
+    }
+    return Image.file(
+      File(path),
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) =>
+      const Icon(Icons.pets, size: 28, color: AppColors.primary),
     );
   }
 }

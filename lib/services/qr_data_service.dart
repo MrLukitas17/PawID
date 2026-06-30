@@ -18,6 +18,13 @@ class QrDataService {
       't':  pet.ownerPhone,
       'em': pet.ownerEmail,
       'id': pet.id,
+      // URL pública de la foto en Supabase Storage (si existe).
+      // Si photoPath es null o sigue siendo una ruta local antigua que
+      // nunca se subió, simplemente no se manda este parámetro y el HTML
+      // muestra el círculo con la inicial, como ya estaba previsto.
+      if (pet.photoPath != null &&
+          pet.photoPath!.startsWith('http'))
+        'img': pet.photoPath!,
     };
 
     final query = params.entries
