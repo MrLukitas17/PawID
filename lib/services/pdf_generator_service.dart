@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -8,17 +9,15 @@ import 'package:printing/printing.dart';
 import '../models/pet.dart';
 
 class PdfGeneratorService {
-  // ── Nueva paleta de colores ──────────────────────────────────────────────
-  static const PdfColor _primary     = PdfColor.fromInt(0xFF007777); // Turquesa oscuro
-  static const PdfColor _primaryLight= PdfColor.fromInt(0xFF00A3A3); // Turquesa claro
-  static const PdfColor _mint        = PdfColor.fromInt(0xFFE0F7FA); // Verde menta
-  static const PdfColor _beige       = PdfColor.fromInt(0xFFF5F5F0); // Beige tierra
-  static const PdfColor _textDark    = PdfColor.fromInt(0xFF1A1A3A); // Azul marino
-  static const PdfColor _textMedium  = PdfColor.fromInt(0xFF333333); // Gris oscuro
-  static const PdfColor _textLight   = PdfColor.fromInt(0xFF666666); // Gris medio
-  static const PdfColor _coral       = PdfColor.fromInt(0xFFFF8C69); // Naranja coral
-  static const PdfColor _white       = PdfColor.fromInt(0xFFFEFEFE); // Blanco crudo
-  static const PdfColor _border      = PdfColor.fromInt(0xFF00A3A3); // Borde turquesa
+  // ── Paleta de colores ────────────────────────────────────────────────────
+  static const PdfColor _primary      = PdfColor.fromInt(0xFF007777);
+  static const PdfColor _primaryLight = PdfColor.fromInt(0xFF00A3A3);
+  static const PdfColor _mint         = PdfColor.fromInt(0xFFE0F7FA);
+  static const PdfColor _beige        = PdfColor.fromInt(0xFFF5F5F0);
+  static const PdfColor _textDark     = PdfColor.fromInt(0xFF1A1A3A);
+  static const PdfColor _textLight    = PdfColor.fromInt(0xFF666666);
+  static const PdfColor _white        = PdfColor.fromInt(0xFFFEFEFE);
+  static const PdfColor _border       = PdfColor.fromInt(0xFF00A3A3);
 
   static Future<String> generateAndOpen(Pet pet) async {
     final pdfBytes = await _buildPdf(pet);
@@ -39,17 +38,37 @@ class PdfGeneratorService {
     );
   }
 
+  // Carga los bytes de la imagen sin importar si es URL remota o ruta local.
+  // Devuelve null si no hay foto o si falla la carga (el PDF se genera igual,
+  // con el círculo de inicial como respaldo).
+  static Future<Uint8List?> _loadPhotoBytes(String? photoPath) async {
+    if (photoPath == null || photoPath.isEmpty) return null;
+    try {
+      if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+        // Foto en Supabase Storage: descarga los bytes vía HTTP
+        final response = await http.get(Uri.parse(photoPath))
+            .timeout(const Duration(seconds: 10));
+        if (response.statusCode == 200) return response.bodyBytes;
+        return null;
+      } else {
+        // Ruta local (compatibilidad con datos viejos antes del fix de Storage)
+        final file = File(photoPath);
+        if (await file.exists()) return await file.readAsBytes();
+        return null;
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<Uint8List> _buildPdf(Pet pet) async {
     final pdf = pw.Document();
 
+    // Carga la imagen correctamente tanto desde URL como desde ruta local
     pw.MemoryImage? petImage;
-    if (pet.photoPath != null) {
-      try {
-        final imgFile = File(pet.photoPath!);
-        if (await imgFile.exists()) {
-          petImage = pw.MemoryImage(await imgFile.readAsBytes());
-        }
-      } catch (_) {}
+    final photoBytes = await _loadPhotoBytes(pet.photoPath);
+    if (photoBytes != null) {
+      petImage = pw.MemoryImage(photoBytes);
     }
 
     pdf.addPage(
@@ -60,7 +79,6 @@ class PdfGeneratorService {
           return pw.Container(
             width: double.infinity,
             decoration: pw.BoxDecoration(
-              // Borde rectangular turquesa alrededor de todo el contenido
               border: pw.Border.all(color: _border, width: 2.5),
               borderRadius: pw.BorderRadius.circular(14),
             ),
@@ -98,21 +116,17 @@ class PdfGeneratorService {
                       // Foto o inicial
                       petImage != null
                           ? pw.Container(
-                        width: 64,
-                        height: 64,
+                        width: 64, height: 64,
                         decoration: pw.BoxDecoration(
                           shape: pw.BoxShape.circle,
-                          border: pw.Border.all(
-                              color: _white, width: 2.5),
+                          border: pw.Border.all(color: _white, width: 2.5),
                         ),
                         child: pw.ClipOval(
-                          child: pw.Image(petImage,
-                              fit: pw.BoxFit.cover),
+                          child: pw.Image(petImage, fit: pw.BoxFit.cover),
                         ),
                       )
                           : pw.Container(
-                        width: 64,
-                        height: 64,
+                        width: 64, height: 64,
                         decoration: pw.BoxDecoration(
                           shape: pw.BoxShape.circle,
                           color: _mint,
@@ -210,7 +224,6 @@ class PdfGeneratorService {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          // Título con fondo turquesa claro
           pw.Container(
             width: double.infinity,
             padding: const pw.EdgeInsets.symmetric(
@@ -230,7 +243,6 @@ class PdfGeneratorService {
                   color: _white),
             ),
           ),
-          // Filas con fondo blanco crudo
           pw.Container(
             color: _beige,
             padding: const pw.EdgeInsets.all(14),
@@ -250,8 +262,7 @@ class PdfGeneratorService {
           pw.SizedBox(
             width: 140,
             child: pw.Text(label,
-                style: pw.TextStyle(
-                    fontSize: 10, color: _textLight)),
+                style: pw.TextStyle(fontSize: 10, color: _textLight)),
           ),
           pw.Expanded(
             child: pw.Text(value,
