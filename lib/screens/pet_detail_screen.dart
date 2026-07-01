@@ -282,6 +282,9 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
       return Image.network(
         path,
         fit: BoxFit.cover,
+        // ValueKey con la URL completa: si la URL cambia (nueva foto subida
+        // con timestamp distinto), Flutter descarta la imagen cacheada.
+        key: ValueKey(path),
         errorBuilder: (_, __, ___) =>
         const Icon(Icons.pets, size: 44, color: AppColors.primary),
       );

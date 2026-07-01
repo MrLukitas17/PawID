@@ -120,192 +120,196 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      body: Stack(
-        children: [
-          // Imagen de fondo
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/registro.png',
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
+      body: SizedBox(
+        width: double.infinity,
+        height: MediaQuery.of(context).size.height,
+        child: Stack(
+          children: [
+            // Imagen de fondo
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/registro.png',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+              ),
             ),
-          ),
 
-          // Contenido scrollable
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Icon(Icons.pets, color: Color(0xFF007777), size: 32),
-                      Icon(Icons.add, color: Color(0xFF007777), size: 32),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Card con formulario — blanco semitransparente
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.96),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
+            // Contenido scrollable
+            SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Icon(Icons.pets, color: Color(0xFF007777), size: 32),
+                        Icon(Icons.add, color: Color(0xFF007777), size: 32),
                       ],
                     ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Crear Cuenta',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF007777),
+                    const SizedBox(height: 24),
+
+                    // Card con formulario — blanco semitransparente
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.96),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Crear Cuenta',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF007777),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          _buildField(
-                            controller: _nombreController,
-                            label: 'Nombre completo',
-                            icon: Icons.person_outline,
-                            validator: (v) => v == null || v.isEmpty ? 'Ingresa tu nombre' : null,
-                          ),
-                          const SizedBox(height: 14),
-                          Focus(
-                            onFocusChange: (hasFocus) {
-                              if (!hasFocus) _validateEmail();
-                            },
-                            child: _buildField(
-                              controller: _emailController,
-                              label: 'Email',
-                              icon: Icons.email_outlined,
-                              keyboardType: TextInputType.emailAddress,
+                            const SizedBox(height: 20),
+                            _buildField(
+                              controller: _nombreController,
+                              label: 'Nombre completo',
+                              icon: Icons.person_outline,
+                              validator: (v) => v == null || v.isEmpty ? 'Ingresa tu nombre' : null,
+                            ),
+                            const SizedBox(height: 14),
+                            Focus(
+                              onFocusChange: (hasFocus) {
+                                if (!hasFocus) _validateEmail();
+                              },
+                              child: _buildField(
+                                controller: _emailController,
+                                label: 'Email',
+                                icon: Icons.email_outlined,
+                                keyboardType: TextInputType.emailAddress,
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) return 'Ingresa tu email';
+                                  if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) return 'Email inválido';
+                                  if (_emailError != null) return _emailError;
+                                  return null;
+                                },
+                              ),
+                            ),
+                            if (_emailError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(_emailError!,
+                                    style: const TextStyle(color: Colors.redAccent, fontSize: 11)),
+                              ),
+                            const SizedBox(height: 14),
+                            _buildField(
+                              controller: _passwordController,
+                              label: 'Contraseña',
+                              icon: Icons.lock_outline,
+                              isPassword: true,
                               validator: (v) {
-                                if (v == null || v.isEmpty) return 'Ingresa tu email';
-                                if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) return 'Email inválido';
-                                if (_emailError != null) return _emailError;
+                                if (v == null || v.isEmpty) return 'Ingresa una contraseña';
+                                if (v.length < 8) return 'Mínimo 8 caracteres';
                                 return null;
                               },
                             ),
-                          ),
-                          if (_emailError != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(_emailError!,
-                                  style: const TextStyle(color: Colors.redAccent, fontSize: 11)),
+                            const SizedBox(height: 14),
+                            _buildField(
+                              controller: _confirmController,
+                              label: 'Confirmar contraseña',
+                              icon: Icons.lock_outline,
+                              isPassword: true,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Confirma tu contraseña';
+                                if (v != _passwordController.text) return 'Las contraseñas no coinciden';
+                                return null;
+                              },
                             ),
-                          const SizedBox(height: 14),
-                          _buildField(
-                            controller: _passwordController,
-                            label: 'Contraseña',
-                            icon: Icons.lock_outline,
-                            isPassword: true,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) return 'Ingresa una contraseña';
-                              if (v.length < 8) return 'Mínimo 8 caracteres';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 14),
-                          _buildField(
-                            controller: _confirmController,
-                            label: 'Confirmar contraseña',
-                            icon: Icons.lock_outline,
-                            isPassword: true,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) return 'Confirma tu contraseña';
-                              if (v != _passwordController.text) return 'Las contraseñas no coinciden';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 24, height: 24,
-                                child: Checkbox(
-                                  value: _acceptedTerms,
-                                  onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
-                                  activeColor: const Color(0xFF007777),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(4)),
-                                  side: const BorderSide(color: Color(0xFF007777), width: 1.5),
+                            const SizedBox(height: 16),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(
+                                  width: 24, height: 24,
+                                  child: Checkbox(
+                                    value: _acceptedTerms,
+                                    onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
+                                    activeColor: const Color(0xFF007777),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4)),
+                                    side: const BorderSide(color: Color(0xFF007777), width: 1.5),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              const Expanded(
-                                child: Text(
-                                  'Acepto los Términos de Servicio y la Política de Privacidad.',
-                                  style: TextStyle(
-                                      color: Color(0xFF333333), fontSize: 12, height: 1.4),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Text(
+                                    'Acepto los Términos de Servicio y la Política de Privacidad.',
+                                    style: TextStyle(
+                                        color: Color(0xFF333333), fontSize: 12, height: 1.4),
+                                  ),
                                 ),
+                              ],
+                            ),
+                            if (_errorMessage != null) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                                ),
+                                child: Text(_errorMessage!,
+                                    style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                                    textAlign: TextAlign.center),
                               ),
                             ],
-                          ),
-                          if (_errorMessage != null) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.redAccent.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
-                              ),
-                              child: Text(_errorMessage!,
-                                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-                                  textAlign: TextAlign.center),
-                            ),
                           ],
-                        ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                  // Botón crear cuenta
-                  _isLoading
-                      ? const CircularProgressIndicator(color: Color(0xFF007777))
-                      : _boton(
-                    texto: 'CREAR CUENTA',
-                    color: const Color(0xFF007777),
-                    onTap: _handleRegister,
-                  ),
-                  const SizedBox(height: 12),
+                    // Botón crear cuenta
+                    _isLoading
+                        ? const CircularProgressIndicator(color: Color(0xFF007777))
+                        : _boton(
+                      texto: 'CREAR CUENTA',
+                      color: const Color(0xFF007777),
+                      onTap: _handleRegister,
+                    ),
+                    const SizedBox(height: 12),
 
-                  // Volver al inicio — verde claro
-                  _boton(
-                    texto: 'VOLVER AL INICIO',
-                    color: const Color(0xFF00A3A3),
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(height: 12),
+                    // Volver al inicio — verde claro
+                    _boton(
+                      texto: 'VOLVER AL INICIO',
+                      color: const Color(0xFF00A3A3),
+                      onTap: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(height: 12),
 
-                  // Ver términos — salmón
-                  _boton(
-                    texto: 'VER TÉRMINOS',
-                    color: const Color(0xFFFF8C69),
-                    onTap: _showTermsDialog,
-                  ),
-                  const SizedBox(height: 32),
-                ],
+                    // Ver términos — salmón
+                    _boton(
+                      texto: 'VER TÉRMINOS',
+                      color: const Color(0xFFFF8C69),
+                      onTap: _showTermsDialog,
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

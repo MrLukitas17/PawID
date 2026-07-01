@@ -280,7 +280,7 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
                               'Toca + para agregar el primer registro',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                  color: Color(0xFF202123),
+                                  color: Color(0xFF9A9FA7),
                                   fontSize: 10,
                                   fontWeight: FontWeight.w400),
                             ),
@@ -458,6 +458,9 @@ class _PetsScreenState extends State<PetsScreen> with WidgetsBindingObserver {
       return Image.network(
         path,
         fit: BoxFit.cover,
+        // Agrega el timestamp de la URL como key para que Flutter no reutilice
+        // la imagen cacheada cuando la URL cambia al editar la foto.
+        key: ValueKey(path),
         errorBuilder: (_, __, ___) =>
         const Icon(Icons.pets, size: 28, color: AppColors.primary),
       );

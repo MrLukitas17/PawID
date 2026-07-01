@@ -28,14 +28,17 @@ class PetStorageService {
       if (!await file.exists()) return null;
 
       final bytes = await file.readAsBytes();
-      final ext = localPath.split('.').last;
-      // Nombre único por mascota para poder sobreescribir si se cambia la foto
-      final storagePath = '$petId.$ext';
+      final ext = localPath.split('.').last.toLowerCase();
+      // Incluye timestamp en el nombre: así cada vez que se cambia la foto
+      // es un archivo nuevo en Storage, evitando que el CDN sirva la versión
+      // anterior cacheada. El archivo viejo queda huérfano pero no rompe nada.
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final storagePath = '${petId}_$timestamp.$ext';
 
       await _client.storage.from(_storageBucket).uploadBinary(
         storagePath,
         bytes,
-        fileOptions: const FileOptions(upsert: true),
+        fileOptions: const FileOptions(upsert: false),
       );
 
       final publicUrl =

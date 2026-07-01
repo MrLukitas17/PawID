@@ -71,11 +71,73 @@ class _AddPetScreenState extends State<AddPetScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
+  void _showPhotoOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Indicador superior
+              Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Tomar foto
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined,
+                    color: Color(0xFF007777)),
+                title: const Text('Tomar foto',
+                    style: TextStyle(color: Color(0xFF1A1A3A))),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              // Elegir de galería
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined,
+                    color: Color(0xFF007777)),
+                title: const Text('Elegir de galería',
+                    style: TextStyle(color: Color(0xFF1A1A3A))),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              // Eliminar foto (solo si ya hay foto)
+              if (_photoPath != null)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline,
+                      color: Colors.redAccent),
+                  title: const Text('Eliminar foto',
+                      style: TextStyle(color: Colors.redAccent)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _photoPath = null);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
     try {
       final picker = ImagePicker();
       final picked = await picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 80,
         maxWidth: 600,
       );
@@ -492,7 +554,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
 
   Widget _buildPhotoSelector() {
     return GestureDetector(
-      onTap: _pickImage,
+      onTap: _showPhotoOptions,
       child: Stack(
         children: [
           Container(
