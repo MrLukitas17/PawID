@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/registro_medico.dart';
 
 class ServicioHistorial {
   static final _cliente = Supabase.instance.client;
   static const String _archivoLocal = 'pawid_historial.json';
+  static const String _claveWeb = 'pawid_historial';
 
   // ─── SUPABASE ─────────────────────────────────────────────────────────────
 
@@ -63,6 +66,9 @@ class ServicioHistorial {
   }
 
   // ─── LOCAL ────────────────────────────────────────────────────────────────
+  // En móvil/escritorio: archivo JSON en la carpeta de documentos.
+  // En web: SharedPreferences (almacenamiento del navegador), porque el
+  // navegador no tiene una carpeta de documentos accesible.
 
   static Future<File> _getArchivo() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -71,9 +77,17 @@ class ServicioHistorial {
 
   static Future<List<RegistroMedico>> _cargarLocal() async {
     try {
-      final archivo = await _getArchivo();
-      if (!await archivo.exists()) return [];
-      final contenido = await archivo.readAsString();
+      final String contenido;
+
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        contenido = prefs.getString(_claveWeb) ?? '';
+      } else {
+        final archivo = await _getArchivo();
+        if (!await archivo.exists()) return [];
+        contenido = await archivo.readAsString();
+      }
+
       if (contenido.isEmpty) return [];
       final List<dynamic> lista = jsonDecode(contenido);
       return lista.map((r) => RegistroMedico.fromJson(r)).toList();
@@ -82,9 +96,23 @@ class ServicioHistorial {
     }
   }
 
+  /// El respaldo local es "de mejor esfuerzo": si falla, no debe romper
+  /// una operación que en Supabase ya se hizo bien.
   static Future<void> _guardarLocal(List<RegistroMedico> registros) async {
-    final archivo = await _getArchivo();
-    await archivo.writeAsString(
-        jsonEncode(registros.map((r) => r.toJson()).toList()));
+    try {
+      final contenido =
+      jsonEncode(registros.map((r) => r.toJson()).toList());
+
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_claveWeb, contenido);
+      } else {
+        final archivo = await _getArchivo();
+        await archivo.writeAsString(contenido);
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('⚠️ No se pudo guardar el historial local: $e');
+    }
   }
 }

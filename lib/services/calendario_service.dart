@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/evento.dart';
 import 'supabase_config.dart';
 
 class CalendarioService {
   static final _client = SupabaseConfig.client;
   static const String _localFile = 'pawid_calendario.json';
+  static const String _webPrefsKey = 'pawid_calendario';
 
   // ─── SUPABASE ─────────────────────────────────────────────────────────────
 
@@ -41,7 +44,10 @@ class CalendarioService {
     } catch (_) {}
     final eventos = await _loadLocal();
     final i = eventos.indexWhere((e) => e.id == evento.id);
-    if (i != -1) { eventos[i] = evento; await _saveLocal(eventos); }
+    if (i != -1) {
+      eventos[i] = evento;
+      await _saveLocal(eventos);
+    }
   }
 
   static Future<void> deleteEvento(String id) async {
@@ -59,6 +65,9 @@ class CalendarioService {
   }
 
   // ─── LOCAL ────────────────────────────────────────────────────────────────
+  // En móvil/escritorio: archivo JSON en la carpeta de documentos.
+  // En web: SharedPreferences (almacenamiento del navegador), porque el
+  // navegador no tiene una carpeta de documentos accesible.
 
   static Future<File> _getFile() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -67,9 +76,17 @@ class CalendarioService {
 
   static Future<List<Evento>> _loadLocal() async {
     try {
-      final file = await _getFile();
-      if (!await file.exists()) return [];
-      final content = await file.readAsString();
+      final String content;
+
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        content = prefs.getString(_webPrefsKey) ?? '';
+      } else {
+        final file = await _getFile();
+        if (!await file.exists()) return [];
+        content = await file.readAsString();
+      }
+
       if (content.isEmpty) return [];
       final List<dynamic> list = jsonDecode(content);
       return list.map((e) => Evento.fromJson(e)).toList();
@@ -78,9 +95,22 @@ class CalendarioService {
     }
   }
 
+  /// El respaldo local es "de mejor esfuerzo": si falla, no debe romper
+  /// una operación que en Supabase ya se hizo bien.
   static Future<void> _saveLocal(List<Evento> eventos) async {
-    final file = await _getFile();
-    await file.writeAsString(
-        jsonEncode(eventos.map((e) => e.toJson()).toList()));
+    try {
+      final content = jsonEncode(eventos.map((e) => e.toJson()).toList());
+
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_webPrefsKey, content);
+      } else {
+        final file = await _getFile();
+        await file.writeAsString(content);
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('⚠️ No se pudo guardar el calendario local: $e');
+    }
   }
 }
